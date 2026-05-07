@@ -15,6 +15,6 @@ public class PageQuery {
     private Long pageNum = 1L;
 
     @Min(value = 1, message = "每页条数不能小于 1")
-    @Max(value = 500, message = "每页条数不能超过 500")
+    @Max(value = 100, message = "每页条数不能超过 100")
     private Long pageSize = 10L;
 }
