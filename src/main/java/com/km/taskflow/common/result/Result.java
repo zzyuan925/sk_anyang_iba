@@ -16,7 +16,7 @@ public class Result<T> {
     
     private T data;
 
-    public Result() {
+    private Result() {
     }
     
     public static <T> Result<T> success(){

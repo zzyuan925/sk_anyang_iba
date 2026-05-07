@@ -23,7 +23,7 @@ public class BusinessException extends RuntimeException{
 
     /**
      * 场景 2：直接抛出具体的枚举错误
-     * 例如：throw new BusinessException(ResultCode.USER_NOT_FOUND);
+     * 例如：throw new BusinessException(ResultCode.NOT_FOUND);
      */
     public BusinessException(ResultCode resultCode) {
         super(resultCode.getMessage());
