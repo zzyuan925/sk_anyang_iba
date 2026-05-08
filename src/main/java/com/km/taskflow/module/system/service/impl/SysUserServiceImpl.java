@@ -81,6 +81,7 @@ public class SysUserServiceImpl implements SysUserService {
 
         SysUser user = new SysUser();
         BeanUtils.copyProperties(createDTO, user);
+        user.setUsername(username);
 
         if (user.getStatus() == null) {
             user.setStatus(1);
