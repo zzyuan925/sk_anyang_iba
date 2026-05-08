@@ -1,10 +1,7 @@
 package com.km.taskflow.module.system.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 /**
@@ -24,6 +21,7 @@ public class PermissionCreateDTO {
     @Schema(description = "权限编码", example = "system:user:list")
     @NotBlank(message = "权限编码不能为空")
     @Size(max = 100, message = "权限编码长度不能超过 100")
+    @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9:._-]*$", message = "权限编码格式不正确")
     private String permissionCode;
 
     @Schema(description = "权限类型：1菜单，2按钮，3接口", example = "3")

@@ -135,8 +135,10 @@ public class SysUserServiceImpl implements SysUserService {
         if (roleIds.isEmpty()) {
             return List.of();
         }
-
-        List<SysRole> roles = sysRoleMapper.selectBatchIds(roleIds);
+        
+        List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .in(SysRole::getId,roleIds)
+                .orderByAsc(SysRole::getId));
 
         return roles.stream().map(this::toRoleVO).toList();
     }
@@ -149,6 +151,9 @@ public class SysUserServiceImpl implements SysUserService {
         SysUser user = sysUserMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("不能给禁用用户分配角色");
         }
 
         Set<Long> uniqueRoleIds = assignRoleDTO.getRoleIds() == null ? Set.of() : new HashSet<>(assignRoleDTO.getRoleIds());

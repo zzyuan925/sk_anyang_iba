@@ -30,6 +30,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SysPermissionServiceImpl implements SysPermissionService {
+    
+    public static final Long ROOT_ID = 0L;
 
     private final SysPermissionMapper sysPermissionMapper;
 
@@ -66,22 +68,29 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createPermission(PermissionCreateDTO createDTO) {
+        String permissionName = createDTO.getPermissionName().trim();
         String permissionCode = createDTO.getPermissionCode().trim();
-
+        Long parentId = createDTO.getParentId() == null ? 0L : createDTO.getParentId();
+        if (!ROOT_ID.equals(parentId)) {
+            SysPermission parent = sysPermissionMapper.selectById(parentId);
+            if (parent == null) {
+                throw new BusinessException("父级权限不存在");
+            }
+        }
+        
         Long count = sysPermissionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
                 .eq(SysPermission::getPermissionCode, permissionCode));
 
         if (count > 0) {
             throw new BusinessException("权限编码已存在");
         }
+        
 
         SysPermission permission = new SysPermission();
         BeanUtils.copyProperties(createDTO, permission);
+        permission.setPermissionName(permissionName);
         permission.setPermissionCode(permissionCode);
-
-        if (permission.getParentId() == null) {
-            permission.setParentId(0L);
-        }
+        permission.setParentId(parentId);
         if (permission.getStatus() == null) {
             permission.setStatus(1);
         }
@@ -100,7 +109,19 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         if (oldPermission == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "权限不存在");
         }
+        Long parentId = updateDTO.getParentId();
+        if (parentId != null) {
+            if (parentId.equals(updateDTO.getId())) {
+                throw new BusinessException("父级权限不能选择自己");
+            }
 
+            if (!ROOT_ID.equals(updateDTO.getParentId())) {
+                SysPermission parent = sysPermissionMapper.selectById(parentId);
+                if (parent == null) {
+                    throw new BusinessException("父级权限不存在");
+                }
+            }
+        }
         SysPermission permission = new SysPermission();
         BeanUtils.copyProperties(updateDTO, permission);
 

@@ -125,11 +125,18 @@ public class SysRoleServiceImpl implements SysRoleService {
             throw new BusinessException("系统内置管理员角色不允许删除");
         }
 
-        Long count = sysUserRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
+        Long userCount = sysUserRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getRoleId, id));
 
-        if (count > 0) {
+        if (userCount > 0) {
             throw new BusinessException("该角色已分配给用户，不能删除");
+        }
+
+        Long permissionCount = sysRolePermissionMapper.selectCount(new LambdaQueryWrapper<SysRolePermission>()
+                .eq(SysRolePermission::getRoleId, id));
+
+        if (permissionCount > 0) {
+            throw new BusinessException("该角色已分配权限，不能删除");
         }
         
         sysRoleMapper.deleteById(id);
@@ -162,7 +169,10 @@ public class SysRoleServiceImpl implements SysRoleService {
             return List.of();
         }
 
-        List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(permissionIds);
+        List<SysPermission> permissions = sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+                .in(SysPermission::getId, permissionIds)
+                .orderByAsc(SysPermission::getParentId)
+                .orderByAsc(SysPermission::getId));
 
         return permissions.stream().map(this::toPermissionVO).toList();
     }
@@ -175,6 +185,9 @@ public class SysRoleServiceImpl implements SysRoleService {
         SysRole role = sysRoleMapper.selectById(roleId);
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
+        }
+        if (role.getStatus() == null || role.getStatus() != 1) {
+            throw new BusinessException("不能给禁用角色分配权限");
         }
 
         Set<Long> uniquePermissionIds = assignPermissionDTO.getPermissionIds() == null ? Set.of() : new HashSet<>(assignPermissionDTO.getPermissionIds());
