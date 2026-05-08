@@ -6,6 +6,7 @@ import com.km.taskflow.module.system.dto.RoleCreateDTO;
 import com.km.taskflow.module.system.dto.RoleQueryDTO;
 import com.km.taskflow.module.system.dto.RoleUpdateDTO;
 import com.km.taskflow.module.system.service.SysRoleService;
+import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @author zzy
@@ -61,5 +64,11 @@ public class SysRoleController {
     public Result<Void> delete(@PathVariable @NotNull(message = "角色ID不能为空") Long id) {
         sysRoleService.deleteRole(id);
         return Result.success();
+    }
+
+    @Operation(summary = "查询启用角色下拉选项", description = "用于用户分配角色时选择角色")
+    @GetMapping("/options")
+    public Result<List<RoleOptionVO>> options() {
+        return Result.success(sysRoleService.listEnabledRoleOptions());
     }
 }

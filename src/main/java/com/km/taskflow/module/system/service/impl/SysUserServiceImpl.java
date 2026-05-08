@@ -6,18 +6,28 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
+import com.km.taskflow.module.system.dto.UserAssignRoleDTO;
 import com.km.taskflow.module.system.dto.UserCreateDTO;
 import com.km.taskflow.module.system.dto.UserQueryDTO;
 import com.km.taskflow.module.system.dto.UserUpdateDTO;
+import com.km.taskflow.module.system.entity.SysRole;
 import com.km.taskflow.module.system.entity.SysUser;
+import com.km.taskflow.module.system.entity.SysUserRole;
+import com.km.taskflow.module.system.mapper.SysRoleMapper;
 import com.km.taskflow.module.system.mapper.SysUserMapper;
+import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysUserService;
+import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author zzy
@@ -27,6 +37,10 @@ import org.springframework.util.StringUtils;
 public class SysUserServiceImpl implements SysUserService {
 
     private final SysUserMapper sysUserMapper;
+    
+    private final SysRoleMapper sysRoleMapper;
+
+    private final SysUserRoleMapper sysUserRoleMapper;
 
     @Override
     public PageResult<UserVO> pageUsers(UserQueryDTO queryDTO) {
@@ -99,11 +113,86 @@ public class SysUserServiceImpl implements SysUserService {
         }
 
         sysUserMapper.deleteById(id);
+
+        sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, id));
+    }
+
+    @Override
+    public List<RoleVO> listUserRoles(Long userId) {
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId));
+
+        List<Long> roleIds = userRoles.stream()
+                .map(SysUserRole::getRoleId)
+                .toList();
+
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<SysRole> roles = sysRoleMapper.selectBatchIds(roleIds);
+
+        return roles.stream().map(this::toRoleVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignRoles(UserAssignRoleDTO assignRoleDTO) {
+        Long userId = assignRoleDTO.getUserId();
+
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        Set<Long> uniqueRoleIds = assignRoleDTO.getRoleIds() == null ? Set.of() : new HashSet<>(assignRoleDTO.getRoleIds());
+        
+        if (!uniqueRoleIds.isEmpty()) {
+            List<SysRole> roles = sysRoleMapper.selectBatchIds(uniqueRoleIds);
+
+            if (roles.size() != uniqueRoleIds.size()) {
+                throw new BusinessException("存在无效角色");
+            }
+
+            boolean hasDisabledRole = roles.stream().anyMatch(role -> role.getStatus() == null || role.getStatus() != 1);
+            if (hasDisabledRole) {
+                throw new BusinessException("不能分配已禁用角色");
+            }
+        }
+
+        sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId));
+
+        if (uniqueRoleIds.isEmpty()) {
+            return;
+        }
+
+        List<SysUserRole> userRoleList = uniqueRoleIds.stream()
+                .map(roleId -> {
+                    SysUserRole userRole = new SysUserRole();
+                    userRole.setUserId(userId);
+                    userRole.setRoleId(roleId);
+                    return userRole;
+                })
+                .toList();
+
+        sysUserRoleMapper.insertBatch(userRoleList);
     }
 
     private UserVO toVO(SysUser user) {
         UserVO vo = new UserVO();
         BeanUtils.copyProperties(user, vo);
+        return vo;
+    }
+    private RoleVO toRoleVO(SysRole role) {
+        RoleVO vo = new RoleVO();
+        BeanUtils.copyProperties(role, vo);
         return vo;
     }
 }

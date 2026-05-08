@@ -2,10 +2,12 @@ package com.km.taskflow.module.system.controller;
 
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.Result;
+import com.km.taskflow.module.system.dto.UserAssignRoleDTO;
 import com.km.taskflow.module.system.dto.UserCreateDTO;
 import com.km.taskflow.module.system.dto.UserQueryDTO;
 import com.km.taskflow.module.system.dto.UserUpdateDTO;
 import com.km.taskflow.module.system.service.SysUserService;
+import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * @author zzy
@@ -60,6 +64,23 @@ public class SysUserController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable @NotNull(message = "用户ID不能为空") Long id) {
         sysUserService.deleteUser(id);
+        return Result.success();
+    }
+    
+    @Operation(summary = "查询用户已绑定角色", description = "根据用户ID查询该用户拥有的角色列表")
+    @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
+    @GetMapping("/{userId}/roles")
+    public Result<List<RoleVO>> listUserRoles(@PathVariable @NotNull(message = "用户ID不能为空") Long userId) {
+        return Result.success(sysUserService.listUserRoles(userId));
+    }
+
+    @Operation(summary = "给用户分配角色", description = "重新分配用户角色，会覆盖原有角色")
+    @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
+    @PutMapping("/{userId}/roles")
+    public Result<Void> assignRoles(@PathVariable @NotNull(message = "用户ID不能为空") Long userId,
+                                    @RequestBody @Valid UserAssignRoleDTO assignRoleDTO) {
+        assignRoleDTO.setUserId(userId);
+        sysUserService.assignRoles(assignRoleDTO);
         return Result.success();
     }
 }

@@ -10,14 +10,19 @@ import com.km.taskflow.module.system.dto.RoleCreateDTO;
 import com.km.taskflow.module.system.dto.RoleQueryDTO;
 import com.km.taskflow.module.system.dto.RoleUpdateDTO;
 import com.km.taskflow.module.system.entity.SysRole;
+import com.km.taskflow.module.system.entity.SysUserRole;
 import com.km.taskflow.module.system.mapper.SysRoleMapper;
+import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysRoleService;
+import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 /**
  * @author zzy
@@ -27,6 +32,8 @@ import org.springframework.util.StringUtils;
 public class SysRoleServiceImpl implements SysRoleService {
 
     private final SysRoleMapper sysRoleMapper;
+    
+    private final SysUserRoleMapper sysUserRoleMapper;
 
     @Override
     public PageResult<RoleVO> pageRoles(RoleQueryDTO queryDTO) {
@@ -57,6 +64,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createRole(RoleCreateDTO createDTO) {
+        String roleName = createDTO.getRoleName().trim();
         String roleCode = createDTO.getRoleCode().trim();
 
         long count = sysRoleMapper.selectCount(new LambdaQueryWrapper<SysRole>()
@@ -68,6 +76,7 @@ public class SysRoleServiceImpl implements SysRoleService {
 
         SysRole role = new SysRole();
         BeanUtils.copyProperties(createDTO, role);
+        role.setRoleName(roleName);
         role.setRoleCode(roleCode);
 
         if (role.getStatus() == null) {
@@ -105,7 +114,29 @@ public class SysRoleServiceImpl implements SysRoleService {
             throw new BusinessException("系统内置管理员角色不允许删除");
         }
 
+        Long count = sysUserRoleMapper.selectCount(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getRoleId, id));
+
+        if (count > 0) {
+            throw new BusinessException("该角色已分配给用户，不能删除");
+        }
+        
         sysRoleMapper.deleteById(id);
+    }
+
+    @Override
+    public List<RoleOptionVO> listEnabledRoleOptions() {
+        List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getStatus, 1)
+                .orderByAsc(SysRole::getId));
+
+        return roles.stream().map(role -> {
+            RoleOptionVO vo = new RoleOptionVO();
+            vo.setId(role.getId());
+            vo.setRoleName(role.getRoleName());
+            vo.setRoleCode(role.getRoleCode());
+            return vo;
+        }).toList();
     }
 
     private RoleVO toVO(SysRole role) {

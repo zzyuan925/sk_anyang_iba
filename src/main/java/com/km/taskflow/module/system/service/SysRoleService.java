@@ -4,7 +4,10 @@ import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.module.system.dto.RoleCreateDTO;
 import com.km.taskflow.module.system.dto.RoleQueryDTO;
 import com.km.taskflow.module.system.dto.RoleUpdateDTO;
+import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
+
+import java.util.List;
 
 /**
  * @author zzy
@@ -31,4 +34,9 @@ public interface SysRoleService {
      * 删除角色
      */
     void deleteRole(Long id);
+
+    /**
+     * 角色下拉选项
+     */
+    List<RoleOptionVO> listEnabledRoleOptions();
 }
