@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +28,7 @@ public class SysUserController {
 
     @Operation(summary = "分页查询用户", description = "根据用户名、姓名、状态进行模糊分页查询")
     @GetMapping("/page")
-    public Result<PageResult<UserVO>> page(@Validated UserQueryDTO queryDTO) {
+    public Result<PageResult<UserVO>> page(@ParameterObject @Validated UserQueryDTO queryDTO) {
         return Result.success(sysUserService.pageUsers(queryDTO));
     }
 
