@@ -1,6 +1,7 @@
 package com.km.taskflow.common.page;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
@@ -10,31 +11,37 @@ import java.util.List;
  * @description
  * @create 2026-05-07 15:55:35
  */
+@Schema(description = "通用分页响应包装类")
 @Data
 public class PageResult<T> {
     /**
      * 当前页码
      */
+    @Schema(description = "当前页码", example = "1")
     private Long pageNum;
 
     /**
      * 每页条数
      */
+    @Schema(description = "每页条数", example = "10")
     private Long pageSize;
 
     /**
      * 总记录数
      */
+    @Schema(description = "总记录数", example = "100")
     private Long total;
 
     /**
      * 总页数
      */
+    @Schema(description = "总页数", example = "10")
     private Long pages;
 
     /**
      * 当前页数据
      */
+    @Schema(description = "当前页数据")
     private List<T> records;
 
     private PageResult() {
