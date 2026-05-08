@@ -1,10 +1,7 @@
 package com.km.taskflow.module.system.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 /**
@@ -34,5 +31,7 @@ public class UserUpdateDTO {
     private String phone;
     
     @Schema(description = "状态：0禁用，1启用", example = "1")
+    @Min(value = 0, message = "状态值不正确")
+    @Max(value = 1, message = "状态值不正确")
     private Integer status;
 }
