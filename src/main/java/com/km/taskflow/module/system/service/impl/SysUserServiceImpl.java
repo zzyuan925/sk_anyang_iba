@@ -160,7 +160,8 @@ public class SysUserServiceImpl implements SysUserService {
                 throw new BusinessException("存在无效角色");
             }
 
-            boolean hasDisabledRole = roles.stream().anyMatch(role -> role.getStatus() == null || role.getStatus() != 1);
+            boolean hasDisabledRole = roles.stream()
+                    .anyMatch(role -> role.getStatus() == null || role.getStatus() != 1);
             if (hasDisabledRole) {
                 throw new BusinessException("不能分配已禁用角色");
             }

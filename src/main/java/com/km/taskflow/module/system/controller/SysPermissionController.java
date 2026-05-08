@@ -1,0 +1,74 @@
+package com.km.taskflow.module.system.controller;
+
+import com.km.taskflow.common.page.PageResult;
+import com.km.taskflow.common.result.Result;
+import com.km.taskflow.module.system.dto.PermissionCreateDTO;
+import com.km.taskflow.module.system.dto.PermissionQueryDTO;
+import com.km.taskflow.module.system.dto.PermissionUpdateDTO;
+import com.km.taskflow.module.system.service.SysPermissionService;
+import com.km.taskflow.module.system.vo.PermissionOptionVO;
+import com.km.taskflow.module.system.vo.PermissionVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * @author zzy
+ */
+@Tag(name = "权限管理模块", description = "系统权限的增删改查及下拉查询")
+@Validated
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/system/permission")
+public class SysPermissionController {
+
+    private final SysPermissionService sysPermissionService;
+
+    @Operation(summary = "分页查询权限", description = "根据权限名称、权限编码、权限类型、状态进行分页查询")
+    @GetMapping("/page")
+    public Result<PageResult<PermissionVO>> page(@ParameterObject @Validated PermissionQueryDTO queryDTO) {
+        return Result.success(sysPermissionService.pagePermissions(queryDTO));
+    }
+
+    @Operation(summary = "获取权限详情")
+    @Parameter(name = "id", description = "权限ID", required = true, example = "1")
+    @GetMapping("/{id}")
+    public Result<PermissionVO> getById(@PathVariable @NotNull(message = "权限ID不能为空") Long id) {
+        return Result.success(sysPermissionService.getPermissionById(id));
+    }
+
+    @Operation(summary = "创建权限", description = "新增系统权限，成功后返回主键ID")
+    @PostMapping
+    public Result<Long> create(@RequestBody @Valid PermissionCreateDTO createDTO) {
+        return Result.success(sysPermissionService.createPermission(createDTO));
+    }
+
+    @Operation(summary = "修改权限", description = "根据 ID 修改权限信息")
+    @PutMapping
+    public Result<Void> update(@RequestBody @Valid PermissionUpdateDTO updateDTO) {
+        sysPermissionService.updatePermission(updateDTO);
+        return Result.success();
+    }
+
+    @Operation(summary = "逻辑删除权限", description = "根据 ID 逻辑删除权限")
+    @Parameter(name = "id", description = "权限ID", required = true, example = "1")
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable @NotNull(message = "权限ID不能为空") Long id) {
+        sysPermissionService.deletePermission(id);
+        return Result.success();
+    }
+
+    @Operation(summary = "查询启用权限下拉选项", description = "用于角色分配权限时选择权限")
+    @GetMapping("/options")
+    public Result<List<PermissionOptionVO>> options() {
+        return Result.success(sysPermissionService.listEnabledPermissionOptions());
+    }
+}

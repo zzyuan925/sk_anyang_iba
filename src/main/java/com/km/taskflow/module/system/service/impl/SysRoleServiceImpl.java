@@ -6,14 +6,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
+import com.km.taskflow.module.system.dto.RoleAssignPermissionDTO;
 import com.km.taskflow.module.system.dto.RoleCreateDTO;
 import com.km.taskflow.module.system.dto.RoleQueryDTO;
 import com.km.taskflow.module.system.dto.RoleUpdateDTO;
+import com.km.taskflow.module.system.entity.SysPermission;
 import com.km.taskflow.module.system.entity.SysRole;
+import com.km.taskflow.module.system.entity.SysRolePermission;
 import com.km.taskflow.module.system.entity.SysUserRole;
+import com.km.taskflow.module.system.mapper.SysPermissionMapper;
 import com.km.taskflow.module.system.mapper.SysRoleMapper;
+import com.km.taskflow.module.system.mapper.SysRolePermissionMapper;
 import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysRoleService;
+import com.km.taskflow.module.system.vo.PermissionVO;
 import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author zzy
@@ -35,6 +43,9 @@ public class SysRoleServiceImpl implements SysRoleService {
     
     private final SysUserRoleMapper sysUserRoleMapper;
 
+    private final SysPermissionMapper sysPermissionMapper;
+
+    private final SysRolePermissionMapper sysRolePermissionMapper;
     @Override
     public PageResult<RoleVO> pageRoles(RoleQueryDTO queryDTO) {
         Page<SysRole> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
@@ -130,17 +141,92 @@ public class SysRoleServiceImpl implements SysRoleService {
                 .eq(SysRole::getStatus, 1)
                 .orderByAsc(SysRole::getId));
 
-        return roles.stream().map(role -> {
-            RoleOptionVO vo = new RoleOptionVO();
-            vo.setId(role.getId());
-            vo.setRoleName(role.getRoleName());
-            vo.setRoleCode(role.getRoleCode());
-            return vo;
-        }).toList();
+        return roles.stream().map(this::toOptionVO).toList();
+    }
+
+    @Override
+    public List<PermissionVO> listRolePermissions(Long roleId) {
+        SysRole role = sysRoleMapper.selectById(roleId);
+        if (role == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
+        }
+
+        List<SysRolePermission> rolePermissions = sysRolePermissionMapper.selectList(new LambdaQueryWrapper<SysRolePermission>()
+                .eq(SysRolePermission::getRoleId, roleId));
+
+        List<Long> permissionIds = rolePermissions.stream()
+                .map(SysRolePermission::getPermissionId)
+                .toList();
+
+        if (permissionIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(permissionIds);
+
+        return permissions.stream().map(this::toPermissionVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignPermissions(RoleAssignPermissionDTO assignPermissionDTO) {
+        Long roleId = assignPermissionDTO.getRoleId();
+
+        SysRole role = sysRoleMapper.selectById(roleId);
+        if (role == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
+        }
+
+        Set<Long> uniquePermissionIds = assignPermissionDTO.getPermissionIds() == null ? Set.of() : new HashSet<>(assignPermissionDTO.getPermissionIds());
+
+        if (!uniquePermissionIds.isEmpty()) {
+            List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(uniquePermissionIds);
+
+            if (permissions.size() != uniquePermissionIds.size()) {
+                throw new BusinessException("存在无效权限");
+            }
+
+            boolean hasDisabledPermission = permissions.stream()
+                    .anyMatch(permission -> permission.getStatus() == null || permission.getStatus() != 1);
+
+            if (hasDisabledPermission) {
+                throw new BusinessException("不能分配已禁用权限");
+            }
+        }
+
+        sysRolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
+                .eq(SysRolePermission::getRoleId, roleId));
+
+        if (uniquePermissionIds.isEmpty()) {
+            return;
+        }
+
+        List<SysRolePermission> rolePermissionList = uniquePermissionIds.stream()
+                .map(permissionId -> {
+                    SysRolePermission rolePermission = new SysRolePermission();
+                    rolePermission.setRoleId(roleId);
+                    rolePermission.setPermissionId(permissionId);
+                    return rolePermission;
+                })
+                .toList();
+
+        sysRolePermissionMapper.insertBatch(rolePermissionList);
+    }
+
+    private PermissionVO toPermissionVO(SysPermission permission) {
+        PermissionVO vo = new PermissionVO();
+        BeanUtils.copyProperties(permission, vo);
+        return vo;
     }
 
     private RoleVO toVO(SysRole role) {
         RoleVO vo = new RoleVO();
+        BeanUtils.copyProperties(role, vo);
+        return vo;
+    }
+    
+    private RoleOptionVO toOptionVO(SysRole role){
+        RoleOptionVO vo = new RoleOptionVO();
         BeanUtils.copyProperties(role, vo);
         return vo;
     }

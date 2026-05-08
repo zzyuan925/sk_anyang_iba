@@ -2,10 +2,12 @@ package com.km.taskflow.module.system.controller;
 
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.Result;
+import com.km.taskflow.module.system.dto.RoleAssignPermissionDTO;
 import com.km.taskflow.module.system.dto.RoleCreateDTO;
 import com.km.taskflow.module.system.dto.RoleQueryDTO;
 import com.km.taskflow.module.system.dto.RoleUpdateDTO;
 import com.km.taskflow.module.system.service.SysRoleService;
+import com.km.taskflow.module.system.vo.PermissionVO;
 import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,5 +72,22 @@ public class SysRoleController {
     @GetMapping("/options")
     public Result<List<RoleOptionVO>> options() {
         return Result.success(sysRoleService.listEnabledRoleOptions());
+    }
+
+    @Operation(summary = "查询角色已绑定权限", description = "根据角色ID查询该角色拥有的权限列表")
+    @Parameter(name = "roleId", description = "角色ID", required = true, example = "1")
+    @GetMapping("/{roleId}/permissions")
+    public Result<List<PermissionVO>> listRolePermissions(@PathVariable @NotNull(message = "角色ID不能为空") Long roleId) {
+        return Result.success(sysRoleService.listRolePermissions(roleId));
+    }
+
+    @Operation(summary = "给角色分配权限", description = "重新分配角色权限，会覆盖原有权限")
+    @Parameter(name = "roleId", description = "角色ID", required = true, example = "1")
+    @PutMapping("/{roleId}/permissions")
+    public Result<Void> assignPermissions(@PathVariable @NotNull(message = "角色ID不能为空") Long roleId,
+                                          @RequestBody @Valid RoleAssignPermissionDTO assignPermissionDTO) {
+        assignPermissionDTO.setRoleId(roleId);
+        sysRoleService.assignPermissions(assignPermissionDTO);
+        return Result.success();
     }
 }
