@@ -16,7 +16,7 @@ import lombok.Data;
 @Data
 public class UserUpdateDTO {
 
-    @Schema(description = "用户名", example = "admin")
+    @Schema(description = "用户ID", example = "admin")
     @NotNull(message = "用户ID不能为空")
     private Long id;
 

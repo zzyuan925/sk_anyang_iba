@@ -61,7 +61,11 @@ public class PageResult<T> {
         result.setPageNum(pageNum);
         result.setPageSize(pageSize);
         result.setTotal(total);
-        result.setPages(pageSize == 0 ? 0 : (total + pageSize - 1) / pageSize);
+        if (total == null || pageSize == null || pageSize <= 0) {
+            result.setPages(0L);
+        } else {
+            result.setPages((total + pageSize - 1) / pageSize);
+        }
         result.setRecords(records);
         return result;
     }

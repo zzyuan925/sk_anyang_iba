@@ -57,8 +57,9 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long createUser(UserCreateDTO createDTO) {
+        String username = createDTO.getUsername().trim();
         long count = sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, createDTO.getUsername()));
+                .eq(SysUser::getUsername, username));
 
         if (count > 0) {
             throw new BusinessException("用户名已存在");
