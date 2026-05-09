@@ -93,7 +93,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         permission.setPermissionCode(permissionCode);
         permission.setParentId(parentId);
         if (permission.getStatus() == null) {
-            permission.setStatus(SystemConstants.STATUS_ENABLED);;
+            permission.setStatus(SystemConstants.STATUS_ENABLED);
         }
         if (permission.getPermissionType() == null) {
             permission.setPermissionType(3);
