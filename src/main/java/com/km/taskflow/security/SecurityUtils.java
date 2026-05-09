@@ -25,6 +25,11 @@ public class SecurityUtils {
         return loginUser;
     }
 
+    public static boolean isLogin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getPrincipal() instanceof LoginUser;
+    }
+
     public static Long getUserId() {
         return getLoginUser().getUserId();
     }
