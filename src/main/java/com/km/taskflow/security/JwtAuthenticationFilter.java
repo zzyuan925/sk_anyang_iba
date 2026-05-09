@@ -1,6 +1,8 @@
 package com.km.taskflow.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.km.taskflow.common.constant.AuthConstants;
+import com.km.taskflow.common.constant.SystemConstants;
 import com.km.taskflow.module.system.entity.SysUser;
 import com.km.taskflow.module.system.mapper.SysPermissionMapper;
 import com.km.taskflow.module.system.mapper.SysUserMapper;
@@ -14,7 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-import com.km.taskflow.common.constant.AuthConstants;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                     .eq(SysUser::getId, userId));
 
-            if (user != null && user.getStatus() != null && user.getStatus() == 1) {
+            if (user != null && SystemConstants.STATUS_ENABLED.equals(user.getStatus())) {
                 List<String> permissions = sysPermissionMapper.selectPermissionCodesByUserId(user.getId());
 
                 LoginUser loginUser = new LoginUser(

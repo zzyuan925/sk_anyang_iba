@@ -3,6 +3,7 @@ package com.km.taskflow.module.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.km.taskflow.common.constant.SystemConstants;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
@@ -31,8 +32,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysPermissionServiceImpl implements SysPermissionService {
     
-    public static final Long ROOT_ID = 0L;
-
     private final SysPermissionMapper sysPermissionMapper;
 
     private final SysRolePermissionMapper sysRolePermissionMapper;
@@ -71,7 +70,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         String permissionName = createDTO.getPermissionName().trim();
         String permissionCode = createDTO.getPermissionCode().trim();
         Long parentId = createDTO.getParentId() == null ? 0L : createDTO.getParentId();
-        if (!ROOT_ID.equals(parentId)) {
+        if (!SystemConstants.ROOT_PARENT_ID.equals(parentId)) {
             SysPermission parent = sysPermissionMapper.selectById(parentId);
             if (parent == null) {
                 throw new BusinessException("父级权限不存在");
@@ -115,7 +114,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
                 throw new BusinessException("父级权限不能选择自己");
             }
 
-            if (!ROOT_ID.equals(updateDTO.getParentId())) {
+            if (!SystemConstants.ROOT_PARENT_ID.equals(updateDTO.getParentId())) {
                 SysPermission parent = sysPermissionMapper.selectById(parentId);
                 if (parent == null) {
                     throw new BusinessException("父级权限不存在");

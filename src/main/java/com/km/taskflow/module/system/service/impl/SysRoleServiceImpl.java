@@ -3,6 +3,7 @@ package com.km.taskflow.module.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.km.taskflow.common.constant.SystemConstants;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
@@ -121,7 +122,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         }
 
         // 先简单限制：系统内置 admin 角色不允许删除
-        if ("admin".equals(role.getRoleCode())) {
+        if (SystemConstants.ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
             throw new BusinessException("系统内置管理员角色不允许删除");
         }
 

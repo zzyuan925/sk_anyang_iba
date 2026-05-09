@@ -1,5 +1,6 @@
 package com.km.taskflow.config;
 
+import com.km.taskflow.common.constant.SecurityConstants;
 import com.km.taskflow.security.AccessDeniedHandlerImpl;
 import com.km.taskflow.security.AuthenticationEntryPointImpl;
 import com.km.taskflow.security.JwtAuthenticationFilter;
@@ -66,15 +67,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/system/auth/login",
-                                "/test/**",
-                                "/doc.html",
-                                "/webjars/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                        .requestMatchers(SecurityConstants.PERMIT_ALL_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(daoAuthenticationProvider())
