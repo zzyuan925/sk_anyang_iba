@@ -4,6 +4,7 @@ import com.km.taskflow.common.result.Result;
 import com.km.taskflow.common.result.ResultCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
     public Result<Void> handleConstraintViolationException(ConstraintViolationException e) {
         log.warn("[参数校验异常] 错误信息: {}", e.getMessage());
         return Result.fail(ResultCode.PARAM_ERROR.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public Result<Void> handleAccessDeniedException(AccessDeniedException e) {
+        log.warn("[权限异常] 错误信息: {}", e.getMessage());
+        return Result.fail(ResultCode.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)

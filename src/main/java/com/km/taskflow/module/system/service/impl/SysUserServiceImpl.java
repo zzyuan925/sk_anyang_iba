@@ -21,6 +21,7 @@ import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,6 +42,8 @@ public class SysUserServiceImpl implements SysUserService {
     private final SysRoleMapper sysRoleMapper;
 
     private final SysUserRoleMapper sysUserRoleMapper;
+
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public PageResult<UserVO> pageUsers(UserQueryDTO queryDTO) {
@@ -82,6 +85,7 @@ public class SysUserServiceImpl implements SysUserService {
         SysUser user = new SysUser();
         BeanUtils.copyProperties(createDTO, user);
         user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
 
         if (user.getStatus() == null) {
             user.setStatus(1);

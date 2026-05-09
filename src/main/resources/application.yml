@@ -22,3 +22,7 @@ mybatis-plus:
       logic-not-delete-value: 0 #不删除
 knife4j:
   enable: true
+taskflow:
+  jwt:
+    secret: taskflow-taskflow-taskflow-taskflow-2026-secret-key
+    expire-minutes: 1440
