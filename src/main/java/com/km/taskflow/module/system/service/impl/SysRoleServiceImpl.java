@@ -92,7 +92,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         role.setRoleCode(roleCode);
 
         if (role.getStatus() == null) {
-            role.setStatus(1);
+            role.setStatus(SystemConstants.STATUS_ENABLED);
         }
 
         sysRoleMapper.insert(role);
@@ -146,7 +146,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     public List<RoleOptionVO> listEnabledRoleOptions() {
         List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getStatus, 1)
+                .eq(SysRole::getStatus, SystemConstants.STATUS_ENABLED)
                 .orderByAsc(SysRole::getId));
 
         return roles.stream().map(this::toOptionVO).toList();
@@ -187,7 +187,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
-        if (role.getStatus() == null || role.getStatus() != 1) {
+        if (!SystemConstants.STATUS_ENABLED.equals(role.getStatus())) {
             throw new BusinessException("不能给禁用角色分配权限");
         }
 
@@ -201,7 +201,7 @@ public class SysRoleServiceImpl implements SysRoleService {
             }
 
             boolean hasDisabledPermission = permissions.stream()
-                    .anyMatch(permission -> permission.getStatus() == null || permission.getStatus() != 1);
+                    .anyMatch(permission -> !SystemConstants.STATUS_ENABLED.equals(permission.getStatus()));
 
             if (hasDisabledPermission) {
                 throw new BusinessException("不能分配已禁用权限");

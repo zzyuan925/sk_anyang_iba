@@ -1,5 +1,6 @@
 package com.km.taskflow.security;
 
+import com.km.taskflow.common.constant.SystemConstants;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -63,6 +64,6 @@ public class LoginUser implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status != null && status == 1;
+        return SystemConstants.STATUS_ENABLED.equals(status);
     }
 }

@@ -69,7 +69,9 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     public Long createPermission(PermissionCreateDTO createDTO) {
         String permissionName = createDTO.getPermissionName().trim();
         String permissionCode = createDTO.getPermissionCode().trim();
-        Long parentId = createDTO.getParentId() == null ? 0L : createDTO.getParentId();
+        Long parentId = createDTO.getParentId() == null
+                ? SystemConstants.ROOT_PARENT_ID
+                : createDTO.getParentId();
         if (!SystemConstants.ROOT_PARENT_ID.equals(parentId)) {
             SysPermission parent = sysPermissionMapper.selectById(parentId);
             if (parent == null) {
@@ -91,7 +93,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         permission.setPermissionCode(permissionCode);
         permission.setParentId(parentId);
         if (permission.getStatus() == null) {
-            permission.setStatus(1);
+            permission.setStatus(SystemConstants.STATUS_ENABLED);;
         }
         if (permission.getPermissionType() == null) {
             permission.setPermissionType(3);
@@ -155,7 +157,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     @Override
     public List<PermissionOptionVO> listEnabledPermissionOptions() {
         List<SysPermission> permissions = sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
-                .eq(SysPermission::getStatus, 1)
+                .eq(SysPermission::getStatus, SystemConstants.STATUS_ENABLED)
                 .orderByAsc(SysPermission::getParentId)
                 .orderByAsc(SysPermission::getId));
 
