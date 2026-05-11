@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.PermissionTypeEnum;
+import com.km.taskflow.common.enums.StatusEnum;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
@@ -101,10 +103,17 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         permission.setPermissionCode(permissionCode);
         permission.setParentId(parentId);
         if (permission.getStatus() == null) {
-            permission.setStatus(SystemConstants.STATUS_ENABLED);
+            permission.setStatus(StatusEnum.ENABLED.getCode());
         }
+        if (!StatusEnum.isValid(permission.getStatus())) {
+            throw new BusinessException("权限状态不合法");
+        }
+        
         if (permission.getPermissionType() == null) {
-            permission.setPermissionType(3);
+            permission.setPermissionType(PermissionTypeEnum.API.getCode());
+        }
+        if (!PermissionTypeEnum.isValid(permission.getPermissionType())) {
+            throw new BusinessException("权限类型不合法");
         }
 
         sysPermissionMapper.insert(permission);
@@ -130,6 +139,14 @@ public class SysPermissionServiceImpl implements SysPermissionService {
                     throw new BusinessException("父级权限不存在");
                 }
             }
+        }
+        if (updateDTO.getStatus() != null && !StatusEnum.isValid(updateDTO.getStatus())) {
+            throw new BusinessException("状态不合法");
+        }
+        
+        if (updateDTO.getPermissionType() != null
+                && !PermissionTypeEnum.isValid(updateDTO.getPermissionType())) {
+            throw new BusinessException("权限类型不合法");
         }
         SysPermission permission = new SysPermission();
         BeanUtils.copyProperties(updateDTO, permission);
@@ -166,7 +183,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     @Override
     public List<PermissionOptionVO> listEnabledPermissionOptions() {
         List<SysPermission> permissions = sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
-                .eq(SysPermission::getStatus, SystemConstants.STATUS_ENABLED)
+                .eq(SysPermission::getStatus, StatusEnum.ENABLED.getCode())
                 .orderByAsc(SysPermission::getParentId)
                 .orderByAsc(SysPermission::getId));
 

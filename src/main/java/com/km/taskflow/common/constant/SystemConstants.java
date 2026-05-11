@@ -11,16 +11,6 @@ public class SystemConstants {
     }
 
     /**
-     * 状态：禁用
-     */
-    public static final Integer STATUS_DISABLED = 0;
-
-    /**
-     * 状态：启用
-     */
-    public static final Integer STATUS_ENABLED = 1;
-
-    /**
      * 树结构根节点父ID
      */
     public static final Long ROOT_PARENT_ID = 0L;

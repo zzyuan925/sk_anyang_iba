@@ -1,7 +1,7 @@
 package com.km.taskflow.security;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.StatusEnum;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -72,6 +72,6 @@ public class LoginUser implements UserDetails {
     @JsonIgnore
     @Override
     public boolean isEnabled() {
-        return SystemConstants.STATUS_ENABLED.equals(status);
+        return StatusEnum.isEnabled(status);
     }
 }

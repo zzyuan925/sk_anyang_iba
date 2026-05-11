@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.StatusEnum;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
@@ -93,7 +94,10 @@ public class SysRoleServiceImpl implements SysRoleService {
         role.setRoleCode(roleCode);
 
         if (role.getStatus() == null) {
-            role.setStatus(SystemConstants.STATUS_ENABLED);
+            role.setStatus(StatusEnum.ENABLED.getCode());
+        }
+        if (!StatusEnum.isValid(role.getStatus())) {
+            throw new BusinessException("角色状态不合法");
         }
 
         sysRoleMapper.insert(role);
@@ -148,7 +152,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     public List<RoleOptionVO> listEnabledRoleOptions() {
         List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getStatus, SystemConstants.STATUS_ENABLED)
+                .eq(SysRole::getStatus, StatusEnum.ENABLED.getCode())
                 .orderByAsc(SysRole::getId));
 
         return roles.stream().map(this::toOptionVO).toList();
@@ -189,7 +193,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
-        if (!SystemConstants.STATUS_ENABLED.equals(role.getStatus())) {
+        if (!StatusEnum.isEnabled(role.getStatus())) {
             throw new BusinessException("不能给禁用角色分配权限");
         }
 
@@ -203,7 +207,7 @@ public class SysRoleServiceImpl implements SysRoleService {
             }
 
             boolean hasDisabledPermission = permissions.stream()
-                    .anyMatch(permission -> !SystemConstants.STATUS_ENABLED.equals(permission.getStatus()));
+                    .anyMatch(permission -> !StatusEnum.isEnabled(permission.getStatus()));
 
             if (hasDisabledPermission) {
                 throw new BusinessException("不能分配已禁用权限");

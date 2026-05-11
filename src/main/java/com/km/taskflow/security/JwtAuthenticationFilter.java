@@ -1,7 +1,7 @@
 package com.km.taskflow.security;
 
 import com.km.taskflow.common.constant.AuthConstants;
-import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.StatusEnum;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         LoginUser loginUser = loginUserCacheService.getLoginUser(userId);
 
-        if (loginUser != null && SystemConstants.STATUS_ENABLED.equals(loginUser.getStatus())) {
+        if (loginUser != null && StatusEnum.isEnabled(loginUser.getStatus())) {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
 

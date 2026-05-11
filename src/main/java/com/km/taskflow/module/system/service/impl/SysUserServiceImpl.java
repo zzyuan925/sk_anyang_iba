@@ -3,7 +3,7 @@ package com.km.taskflow.module.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.StatusEnum;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
@@ -90,7 +90,10 @@ public class SysUserServiceImpl implements SysUserService {
         user.setPassword(passwordEncoder.encode(createDTO.getPassword()));
 
         if (user.getStatus() == null) {
-            user.setStatus(SystemConstants.STATUS_ENABLED);
+            user.setStatus(StatusEnum.ENABLED.getCode());
+        }
+        if (!StatusEnum.isValid(user.getStatus())) {
+            throw new BusinessException("用户状态不合法");
         }
 
         sysUserMapper.insert(user);
@@ -161,7 +164,7 @@ public class SysUserServiceImpl implements SysUserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-        if (!SystemConstants.STATUS_ENABLED.equals(user.getStatus())) {
+        if (!StatusEnum.isEnabled(user.getStatus())) {
             throw new BusinessException("不能给禁用用户分配角色");
         }
 
@@ -175,7 +178,7 @@ public class SysUserServiceImpl implements SysUserService {
             }
 
             boolean hasDisabledRole = roles.stream()
-                    .anyMatch(role -> !SystemConstants.STATUS_ENABLED.equals(role.getStatus()));
+                    .anyMatch(role -> !StatusEnum.isEnabled(role.getStatus()));
             if (hasDisabledRole) {
                 throw new BusinessException("不能分配已禁用角色");
             }
