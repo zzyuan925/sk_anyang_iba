@@ -35,37 +35,61 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final SysPermissionMapper sysPermissionMapper;
 
+    private final LoginUserCacheService loginUserCacheService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = getToken(request);
 
-        if (StringUtils.hasText(token) && jwtUtils.isTokenValid(token)) {
-            Long userId = jwtUtils.getUserId(token);
+        if (!StringUtils.hasText(token) || !jwtUtils.isTokenValid(token)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                    .eq(SysUser::getId, userId));
+        Long userId = jwtUtils.getUserId(token);
 
-            if (user != null && SystemConstants.STATUS_ENABLED.equals(user.getStatus())) {
-                List<String> permissions = sysPermissionMapper.selectPermissionCodesByUserId(user.getId());
+        LoginUser loginUser = loginUserCacheService.getLoginUser(userId);
 
-                LoginUser loginUser = new LoginUser(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getPassword(),
-                        user.getStatus(),
-                        permissions
-                );
+        if (loginUser == null) {
+            loginUser = buildLoginUser(userId);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (loginUser != null) {
+                loginUserCacheService.setLoginUser(loginUser);
             }
         }
 
+        if (loginUser != null && SystemConstants.STATUS_ENABLED.equals(loginUser.getStatus())) {
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Redis 没有登录用户缓存时，从数据库重建 LoginUser。
+     */
+    private LoginUser buildLoginUser(Long userId) {
+        SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getId, userId));
+
+        if (user == null || !SystemConstants.STATUS_ENABLED.equals(user.getStatus())) {
+            return null;
+        }
+
+        List<String> permissions = sysPermissionMapper.selectPermissionCodesByUserId(user.getId());
+
+        return new LoginUser(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                user.getStatus(),
+                permissions
+        );
     }
 
     private String getToken(HttpServletRequest request) {

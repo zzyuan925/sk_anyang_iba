@@ -17,6 +17,7 @@ import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysUserService;
 import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
+import com.km.taskflow.security.LoginUserCacheService;
 import com.km.taskflow.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -43,6 +44,8 @@ public class SysUserServiceImpl implements SysUserService {
     private final SysUserRoleMapper sysUserRoleMapper;
 
     private final PasswordEncoder passwordEncoder;
+
+    private final LoginUserCacheService loginUserCacheService;
 
     @Override
     public PageResult<UserVO> pageUsers(UserQueryDTO queryDTO) {
@@ -106,6 +109,7 @@ public class SysUserServiceImpl implements SysUserService {
         BeanUtils.copyProperties(updateDTO, user);
 
         sysUserMapper.updateById(user);
+        loginUserCacheService.deleteLoginUser(updateDTO.getId());
     }
 
     @Override
@@ -117,6 +121,7 @@ public class SysUserServiceImpl implements SysUserService {
         }
 
         sysUserMapper.deleteById(id);
+        loginUserCacheService.deleteLoginUser(id);
 
         sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getUserId, id));
@@ -193,6 +198,7 @@ public class SysUserServiceImpl implements SysUserService {
                 .toList();
 
         sysUserRoleMapper.insertBatch(userRoleList);
+        loginUserCacheService.deleteLoginUser(userId);
     }
 
     @Override
@@ -218,6 +224,7 @@ public class SysUserServiceImpl implements SysUserService {
         updateUser.setUsername(username);
 
         sysUserMapper.updateById(updateUser);
+        loginUserCacheService.deleteLoginUser(id);
     }
 
     @Override
@@ -243,6 +250,7 @@ public class SysUserServiceImpl implements SysUserService {
         updateUser.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
 
         sysUserMapper.updateById(updateUser);
+        loginUserCacheService.deleteLoginUser(userId);
     }
 
     @Override
@@ -258,6 +266,7 @@ public class SysUserServiceImpl implements SysUserService {
         updateUser.setPassword(passwordEncoder.encode(resetPasswordDTO.getNewPassword()));
 
         sysUserMapper.updateById(updateUser);
+        loginUserCacheService.deleteLoginUser(id);
     }
 
     private UserVO toVO(SysUser user) {

@@ -1,7 +1,5 @@
 package com.km.taskflow.module.system.controller;
 
-import com.km.taskflow.common.log.OperationLog;
-import com.km.taskflow.common.log.OperationType;
 import com.km.taskflow.common.result.Result;
 import com.km.taskflow.common.result.ResultCode;
 import com.km.taskflow.module.system.dto.LoginDTO;
@@ -9,6 +7,7 @@ import com.km.taskflow.module.system.vo.CurrentUserVO;
 import com.km.taskflow.module.system.vo.LoginVO;
 import com.km.taskflow.security.JwtUtils;
 import com.km.taskflow.security.LoginUser;
+import com.km.taskflow.security.LoginUserCacheService;
 import com.km.taskflow.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,7 +36,8 @@ public class AuthController {
 
     private final JwtUtils jwtUtils;
 
-    @OperationLog(module = "认证模块", name = "用户登录", type = OperationType.LOGIN, recordResult = false)
+    private final LoginUserCacheService loginUserCacheService;
+
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody @Valid LoginDTO loginDTO) {
@@ -48,6 +48,9 @@ public class AuthController {
             LoginUser loginUser = (LoginUser) authenticationManager.authenticate(authenticationToken).getPrincipal();
 
             String token = jwtUtils.generateToken(loginUser);
+
+            // 缓存登录用户信息
+            loginUserCacheService.setLoginUser(loginUser);
 
             LoginVO loginVO = new LoginVO();
             loginVO.setToken(token);
@@ -83,6 +86,9 @@ public class AuthController {
     @Operation(summary = "退出登录")
     @PostMapping("/logout")
     public Result<Void> logout() {
+        if (SecurityUtils.isLogin()) {
+            loginUserCacheService.deleteLoginUser(SecurityUtils.getUserId());
+        }
         return Result.success();
     }
 }

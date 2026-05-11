@@ -8,6 +8,12 @@ spring:
     url: jdbc:mysql://localhost:3306/taskflow?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: ${MYSQL_PASSWORD:root}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3000ms
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.km.taskflow.module.*.entity

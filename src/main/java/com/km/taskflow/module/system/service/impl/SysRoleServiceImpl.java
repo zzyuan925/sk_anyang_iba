@@ -20,6 +20,7 @@ import com.km.taskflow.module.system.service.SysRoleService;
 import com.km.taskflow.module.system.vo.PermissionVO;
 import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
+import com.km.taskflow.security.LoginUserCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,9 @@ public class SysRoleServiceImpl implements SysRoleService {
     private final SysPermissionMapper sysPermissionMapper;
 
     private final SysRolePermissionMapper sysRolePermissionMapper;
+
+    private final LoginUserCacheService loginUserCacheService;
+    
     @Override
     public PageResult<RoleVO> pageRoles(RoleQueryDTO queryDTO) {
         Page<SysRole> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
@@ -108,6 +112,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         BeanUtils.copyProperties(updateDTO, role);
 
         sysRoleMapper.updateById(role);
+        clearUserCacheByRoleId(updateDTO.getId());
     }
 
     @Override
@@ -208,20 +213,20 @@ public class SysRoleServiceImpl implements SysRoleService {
         sysRolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
                 .eq(SysRolePermission::getRoleId, roleId));
 
-        if (uniquePermissionIds.isEmpty()) {
-            return;
+        if (!uniquePermissionIds.isEmpty()) {
+            List<SysRolePermission> rolePermissionList = uniquePermissionIds.stream()
+                    .map(permissionId -> {
+                        SysRolePermission rolePermission = new SysRolePermission();
+                        rolePermission.setRoleId(roleId);
+                        rolePermission.setPermissionId(permissionId);
+                        return rolePermission;
+                    })
+                    .toList();
+
+            sysRolePermissionMapper.insertBatch(rolePermissionList);
         }
-
-        List<SysRolePermission> rolePermissionList = uniquePermissionIds.stream()
-                .map(permissionId -> {
-                    SysRolePermission rolePermission = new SysRolePermission();
-                    rolePermission.setRoleId(roleId);
-                    rolePermission.setPermissionId(permissionId);
-                    return rolePermission;
-                })
-                .toList();
-
-        sysRolePermissionMapper.insertBatch(rolePermissionList);
+        // 不管是清空权限，还是重新分配权限，都要清理拥有该角色的用户缓存
+        clearUserCacheByRoleId(roleId);
     }
 
     @Override
@@ -270,4 +275,18 @@ public class SysRoleServiceImpl implements SysRoleService {
         BeanUtils.copyProperties(role, vo);
         return vo;
     }
+    /**
+     * 清理拥有指定角色的用户登录缓存
+     */
+    private void clearUserCacheByRoleId(Long roleId) {
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getRoleId, roleId));
+
+        List<Long> userIds = userRoles.stream()
+                .map(SysUserRole::getUserId)
+                .toList();
+
+        loginUserCacheService.deleteLoginUsers(userIds);
+    }
+    
 }

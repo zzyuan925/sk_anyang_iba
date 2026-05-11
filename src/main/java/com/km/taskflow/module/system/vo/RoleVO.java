@@ -1,6 +1,5 @@
 package com.km.taskflow.module.system.vo;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
