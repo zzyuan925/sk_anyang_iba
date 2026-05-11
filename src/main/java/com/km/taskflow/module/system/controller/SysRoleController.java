@@ -51,7 +51,7 @@ public class SysRoleController {
         return Result.success(sysRoleService.getRoleById(id));
     }
 
-    @OperationLog(module = "角色管理", name = "创建角色", type = OperationType.CREATE, recordResult = false)
+    @OperationLog(module = "角色管理", name = "创建角色", type = OperationType.CREATE)
     @Operation(summary = "创建角色", description = "新增系统角色，成功后返回主键ID")
     @PostMapping
     @PreAuthorize("hasAuthority('system:role:create')")

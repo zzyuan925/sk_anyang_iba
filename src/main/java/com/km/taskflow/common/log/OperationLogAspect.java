@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -54,7 +53,6 @@ public class OperationLogAspect {
 
         HttpServletRequest request = getRequest();
 
-        String traceId = MDC.get(LogConstants.TRACE_ID);
         Long userId = getUserId();
         String username = getUsername();
         String ip = IpUtils.getClientIp(request);
@@ -70,8 +68,7 @@ public class OperationLogAspect {
             long costTime = System.currentTimeMillis() - startTime;
 
             log.info(
-                    "[操作成功] traceId={}, module={}, operation={}, type={}, userId={}, username={}, ip={}, method={}, uri={}, classMethod={}, cost={}ms, params={}, result={}",
-                    traceId,
+                    "[操作成功] module={}, operation={}, type={}, userId={}, username={}, ip={}, method={}, uri={}, classMethod={}, cost={}ms, params={}, result={}",
                     operationLog.module(),
                     operationLog.name(),
                     operationLog.type().getDescription(),
@@ -85,14 +82,13 @@ public class OperationLogAspect {
                     operationLog.recordParams() ? buildParams(joinPoint) : LogConstants.NOT_RECORD,
                     operationLog.recordResult() ? toJson(result) : LogConstants.NOT_RECORD
             );
-
+            
             return result;
         } catch (Throwable e) {
             long costTime = System.currentTimeMillis() - startTime;
 
             log.error(
-                    "[操作失败] traceId={}, module={}, operation={}, type={}, userId={}, username={}, ip={}, method={}, uri={}, classMethod={}, cost={}ms, params={}, error={}",
-                    traceId,
+                    "[操作失败] module={}, operation={}, type={}, userId={}, username={}, ip={}, method={}, uri={}, classMethod={}, cost={}ms, params={}, error={}",
                     operationLog.module(),
                     operationLog.name(),
                     operationLog.type().getDescription(),

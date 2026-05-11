@@ -53,7 +53,7 @@ public class SysPermissionController {
         return Result.success(sysPermissionService.getPermissionById(id));
     }
 
-    @OperationLog(module = "权限管理", name = "创建权限", type = OperationType.CREATE, recordResult = false)
+    @OperationLog(module = "权限管理", name = "创建权限", type = OperationType.CREATE)
     @Operation(summary = "创建权限", description = "新增系统权限，成功后返回主键ID")
     @PostMapping
     @PreAuthorize("hasAuthority('system:permission:create')")

@@ -50,7 +50,7 @@ public class SysUserController {
         return Result.success(sysUserService.getUserById(id));
     }
 
-    @OperationLog(module = "用户管理", name = "创建用户", type = OperationType.CREATE, recordResult = false)
+    @OperationLog(module = "用户管理", name = "创建用户", type = OperationType.CREATE)
     @Operation(summary = "创建用户", description = "新增系统用户，成功后返回主键ID")
     @PostMapping
     @PreAuthorize("hasAuthority('system:user:create')")
@@ -58,7 +58,7 @@ public class SysUserController {
         return Result.success(sysUserService.createUser(createDTO));
     }
 
-    @OperationLog(module = "用户管理", name = "修改用户", type = OperationType.UPDATE)
+    @OperationLog(module = "用户管理", name = "修改用户", type = OperationType.UPDATE,recordResult = false)
     @Operation(summary = "修改用户", description = "根据 ID 修改用户信息")
     @PutMapping
     @PreAuthorize("hasAuthority('system:user:update')")
@@ -67,7 +67,7 @@ public class SysUserController {
         return Result.success();
     }
 
-    @OperationLog(module = "用户管理", name = "删除用户", type = OperationType.DELETE)
+    @OperationLog(module = "用户管理", name = "删除用户", type = OperationType.DELETE,recordResult = false)
     @Operation(summary = "逻辑删除用户", description = "根据 ID 逻辑删除用户，数据不会从数据库彻底抹除")
     @Parameter(name = "id", description = "用户唯一标识", required = true, example = "1")
     @DeleteMapping("/{id}")
