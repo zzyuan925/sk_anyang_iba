@@ -31,6 +31,9 @@ public class LoginUserCacheService {
             return;
         }
 
+        // Redis 登录态不需要保存密码 hash
+        loginUser.setPassword(null);
+
         redisUtils.setObject(
                 buildLoginUserKey(loginUser.getUserId()),
                 loginUser,

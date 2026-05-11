@@ -23,6 +23,7 @@ public class LoginUser implements UserDetails {
 
     private String username;
 
+    @JsonIgnore
     private String password;
 
     /**

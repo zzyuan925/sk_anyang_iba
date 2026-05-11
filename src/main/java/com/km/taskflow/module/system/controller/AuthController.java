@@ -63,7 +63,7 @@ public class AuthController {
         } catch (BadCredentialsException | UsernameNotFoundException e) {
             return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
         } catch (AuthenticationException e) {
-            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "认真失败，请重试");
+            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "认证失败，请重试");
         }
     }
 
