@@ -184,20 +184,20 @@ public class SysUserServiceImpl implements SysUserService {
         sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getUserId, userId));
 
-        if (uniqueRoleIds.isEmpty()) {
-            return;
+        if (!uniqueRoleIds.isEmpty()) {
+            List<SysUserRole> userRoleList = uniqueRoleIds.stream()
+                    .map(roleId -> {
+                        SysUserRole userRole = new SysUserRole();
+                        userRole.setUserId(userId);
+                        userRole.setRoleId(roleId);
+                        return userRole;
+                    })
+                    .toList();
+
+            sysUserRoleMapper.insertBatch(userRoleList);
         }
-
-        List<SysUserRole> userRoleList = uniqueRoleIds.stream()
-                .map(roleId -> {
-                    SysUserRole userRole = new SysUserRole();
-                    userRole.setUserId(userId);
-                    userRole.setRoleId(roleId);
-                    return userRole;
-                })
-                .toList();
-
-        sysUserRoleMapper.insertBatch(userRoleList);
+        
+        // 不管是清空角色，还是重新分配角色，都要清理用户登录缓存
         loginUserCacheService.deleteLoginUser(userId);
     }
 

@@ -13,11 +13,14 @@ import com.km.taskflow.module.system.dto.PermissionUpdateCodeDTO;
 import com.km.taskflow.module.system.dto.PermissionUpdateDTO;
 import com.km.taskflow.module.system.entity.SysPermission;
 import com.km.taskflow.module.system.entity.SysRolePermission;
+import com.km.taskflow.module.system.entity.SysUserRole;
 import com.km.taskflow.module.system.mapper.SysPermissionMapper;
 import com.km.taskflow.module.system.mapper.SysRolePermissionMapper;
+import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysPermissionService;
 import com.km.taskflow.module.system.vo.PermissionOptionVO;
 import com.km.taskflow.module.system.vo.PermissionVO;
+import com.km.taskflow.security.LoginUserCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,10 @@ public class SysPermissionServiceImpl implements SysPermissionService {
     private final SysPermissionMapper sysPermissionMapper;
 
     private final SysRolePermissionMapper sysRolePermissionMapper;
+    
+    private final SysUserRoleMapper sysUserRoleMapper;
+
+    private final LoginUserCacheService loginUserCacheService;
 
     @Override
     public PageResult<PermissionVO> pagePermissions(PermissionQueryDTO queryDTO) {
@@ -128,6 +135,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         BeanUtils.copyProperties(updateDTO, permission);
 
         sysPermissionMapper.updateById(permission);
+        clearUserCacheByPermissionId(updateDTO.getId());
     }
 
     @Override
@@ -188,6 +196,7 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         updatePermission.setPermissionCode(permissionCode);
 
         sysPermissionMapper.updateById(updatePermission);
+        clearUserCacheByPermissionId(id);
     }
 
     private PermissionVO toVO(SysPermission permission) {
@@ -200,5 +209,33 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         PermissionOptionVO vo = new PermissionOptionVO();
         BeanUtils.copyProperties(permission, vo);
         return vo;
+    }
+
+    private void clearUserCacheByPermissionId(Long permissionId) {
+        List<SysRolePermission> rolePermissions = sysRolePermissionMapper.selectList(
+                new LambdaQueryWrapper<SysRolePermission>()
+                        .eq(SysRolePermission::getPermissionId, permissionId)
+        );
+
+        List<Long> roleIds = rolePermissions.stream()
+                .map(SysRolePermission::getRoleId)
+                .distinct()
+                .toList();
+
+        if (roleIds.isEmpty()) {
+            return;
+        }
+
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>()
+                        .in(SysUserRole::getRoleId, roleIds)
+        );
+
+        List<Long> userIds = userRoles.stream()
+                .map(SysUserRole::getUserId)
+                .distinct()
+                .toList();
+
+        loginUserCacheService.deleteLoginUsers(userIds);
     }
 }
