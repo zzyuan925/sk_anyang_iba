@@ -1,12 +1,9 @@
 package com.km.taskflow.module.system.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.km.taskflow.common.core.BaseEntity;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 系统用户实体
@@ -14,11 +11,9 @@ import java.time.LocalDateTime;
  * @author zzy
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_user")
-public class SysUser {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class SysUser extends BaseEntity {
 
     private String username;
 
@@ -34,14 +29,4 @@ public class SysUser {
      * 状态：0禁用，1启用
      */
     private Integer status;
-
-    /**
-     * 逻辑删除：0未删除，1已删除
-     */
-    @TableLogic
-    private Integer deleted;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

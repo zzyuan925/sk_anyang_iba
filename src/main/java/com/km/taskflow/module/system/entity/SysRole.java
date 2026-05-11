@@ -1,24 +1,19 @@
 package com.km.taskflow.module.system.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.km.taskflow.common.core.BaseEntity;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 系统角色实体
  *
  * @author zzy
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @TableName("sys_role")
-public class SysRole {
-
-    @TableId(type = IdType.AUTO)
-    private Long id;
+public class SysRole extends BaseEntity {
 
     private String roleName;
 
@@ -30,14 +25,4 @@ public class SysRole {
      * 状态：0禁用，1启用
      */
     private Integer status;
-
-    /**
-     * 逻辑删除：0未删除，1已删除
-     */
-    @TableLogic
-    private Integer deleted;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }
