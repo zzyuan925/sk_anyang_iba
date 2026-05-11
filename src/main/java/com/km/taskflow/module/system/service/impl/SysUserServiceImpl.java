@@ -103,6 +103,10 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(UserUpdateDTO updateDTO) {
+        if (updateDTO.getStatus() != null && !StatusEnum.isValid(updateDTO.getStatus())) {
+            throw new BusinessException("用户状态不合法");
+        }
+        
         SysUser oldUser = sysUserMapper.selectById(updateDTO.getId());
         if (oldUser == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");

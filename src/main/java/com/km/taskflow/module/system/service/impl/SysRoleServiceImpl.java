@@ -107,6 +107,10 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateRole(RoleUpdateDTO updateDTO) {
+        if (updateDTO.getStatus() != null && !StatusEnum.isValid(updateDTO.getStatus())) {
+            throw new BusinessException("角色状态不合法");
+        }
+        
         SysRole oldRole = sysRoleMapper.selectById(updateDTO.getId());
         if (oldRole == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");

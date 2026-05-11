@@ -1,7 +1,12 @@
 package com.km.taskflow.module.system.dto;
 
+import com.km.taskflow.common.constant.SystemConstants;
+import com.km.taskflow.common.enums.PermissionTypeEnum;
+import com.km.taskflow.common.enums.StatusEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -25,12 +30,10 @@ public class PermissionCreateDTO {
     private String permissionCode;
 
     @Schema(description = "权限类型：1菜单，2按钮，3接口", example = "3")
-    @Min(value = 1, message = "权限类型不正确")
-    @Max(value = 3, message = "权限类型不正确")
-    private Integer permissionType = 3;
+    private Integer permissionType = PermissionTypeEnum.API.getCode();
 
     @Schema(description = "父级权限ID", example = "0")
-    private Long parentId = 0L;
+    private Long parentId = SystemConstants.ROOT_PARENT_ID;
 
     @Schema(description = "前端路由或接口路径", example = "GET:/system/user/page")
     @Size(max = 200, message = "路径长度不能超过 200")
@@ -41,7 +44,5 @@ public class PermissionCreateDTO {
     private String description;
 
     @Schema(description = "状态：0禁用，1启用", example = "1")
-    @Min(value = 0, message = "状态值不正确")
-    @Max(value = 1, message = "状态值不正确")
-    private Integer status = 1;
+    private Integer status = StatusEnum.ENABLED.getCode();
 }
