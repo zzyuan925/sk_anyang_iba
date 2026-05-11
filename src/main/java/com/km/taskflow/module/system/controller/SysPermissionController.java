@@ -44,7 +44,7 @@ public class SysPermissionController {
         return Result.success(sysPermissionService.pagePermissions(queryDTO));
     }
 
-    @OperationLog(module = "权限管理", name = "分页查询权限", type = OperationType.QUERY, recordResult = false)
+    @OperationLog(module = "权限管理", name = "获取权限详情", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "获取权限详情")
     @Parameter(name = "id", description = "权限ID", required = true, example = "1")
     @GetMapping("/{id}")

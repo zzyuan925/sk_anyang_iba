@@ -17,6 +17,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -58,8 +60,10 @@ public class AuthController {
             return Result.success(loginVO);
         } catch (DisabledException e) {
             return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "用户已被禁用");
-        } catch (BadCredentialsException e) {
+        } catch (BadCredentialsException | UsernameNotFoundException e) {
             return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
+        } catch (AuthenticationException e) {
+            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "认真失败，请重试");
         }
     }
 

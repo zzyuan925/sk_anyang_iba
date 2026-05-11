@@ -1,13 +1,13 @@
 package com.km.taskflow.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.module.system.entity.SysUser;
 import com.km.taskflow.module.system.mapper.SysPermissionMapper;
 import com.km.taskflow.module.system.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,7 +31,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .eq(SysUser::getUsername, username));
 
         if (user == null) {
-            throw new BusinessException("用户名或密码错误");
+            throw new UsernameNotFoundException("用户名或密码错误");
         }
 
         List<String> permissions = sysPermissionMapper.selectPermissionCodesByUserId(user.getId());
