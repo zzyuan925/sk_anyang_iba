@@ -26,6 +26,7 @@ public class BaseEntity implements Serializable {
      * 逻辑删除：0 未删除，1 已删除
      */
     @TableLogic
+    @TableField(fill = FieldFill.INSERT)
     private Integer deleted;
 
     /**
