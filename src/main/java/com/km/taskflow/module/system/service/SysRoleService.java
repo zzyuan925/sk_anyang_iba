@@ -1,10 +1,7 @@
 package com.km.taskflow.module.system.service;
 
 import com.km.taskflow.common.page.PageResult;
-import com.km.taskflow.module.system.dto.RoleAssignPermissionDTO;
-import com.km.taskflow.module.system.dto.RoleCreateDTO;
-import com.km.taskflow.module.system.dto.RoleQueryDTO;
-import com.km.taskflow.module.system.dto.RoleUpdateDTO;
+import com.km.taskflow.module.system.dto.*;
 import com.km.taskflow.module.system.vo.PermissionVO;
 import com.km.taskflow.module.system.vo.RoleOptionVO;
 import com.km.taskflow.module.system.vo.RoleVO;
@@ -48,4 +45,8 @@ public interface SysRoleService {
      * 给角色重新分配权限
      */
     void assignPermissions(RoleAssignPermissionDTO assignPermissionDTO);
+    /**
+     * 修改角色编码
+     */
+    void updateRoleCode(Long id, RoleUpdateCodeDTO updateCodeDTO);
 }

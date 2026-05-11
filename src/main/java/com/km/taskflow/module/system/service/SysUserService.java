@@ -1,10 +1,7 @@
 package com.km.taskflow.module.system.service;
 
 import com.km.taskflow.common.page.PageResult;
-import com.km.taskflow.module.system.dto.UserAssignRoleDTO;
-import com.km.taskflow.module.system.dto.UserCreateDTO;
-import com.km.taskflow.module.system.dto.UserQueryDTO;
-import com.km.taskflow.module.system.dto.UserUpdateDTO;
+import com.km.taskflow.module.system.dto.*;
 import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
 
@@ -43,4 +40,19 @@ public interface SysUserService {
      * 给用户重新分配角色
      */
     void assignRoles(UserAssignRoleDTO assignRoleDTO);
+
+    /**
+     * 修改用户名
+     */
+    void updateUsername(Long id, UserUpdateUsernameDTO updateUsernameDTO);
+
+    /**
+     * 修改自己的密码
+     */
+    void changePassword(UserChangePasswordDTO changePasswordDTO);
+
+    /**
+     * 管理员重置密码
+     */
+    void resetPassword(Long id, UserResetPasswordDTO resetPasswordDTO);
 }

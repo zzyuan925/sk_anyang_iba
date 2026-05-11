@@ -7,10 +7,7 @@ import com.km.taskflow.common.constant.SystemConstants;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
-import com.km.taskflow.module.system.dto.UserAssignRoleDTO;
-import com.km.taskflow.module.system.dto.UserCreateDTO;
-import com.km.taskflow.module.system.dto.UserQueryDTO;
-import com.km.taskflow.module.system.dto.UserUpdateDTO;
+import com.km.taskflow.module.system.dto.*;
 import com.km.taskflow.module.system.entity.SysRole;
 import com.km.taskflow.module.system.entity.SysUser;
 import com.km.taskflow.module.system.entity.SysUserRole;
@@ -20,6 +17,7 @@ import com.km.taskflow.module.system.mapper.SysUserRoleMapper;
 import com.km.taskflow.module.system.service.SysUserService;
 import com.km.taskflow.module.system.vo.RoleVO;
 import com.km.taskflow.module.system.vo.UserVO;
+import com.km.taskflow.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -195,6 +193,71 @@ public class SysUserServiceImpl implements SysUserService {
                 .toList();
 
         sysUserRoleMapper.insertBatch(userRoleList);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUsername(Long id, UserUpdateUsernameDTO updateUsernameDTO) {
+        SysUser user = sysUserMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        String username = updateUsernameDTO.getUsername().trim();
+
+        Long count = sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username)
+                .ne(SysUser::getId, id));
+
+        if (count > 0) {
+            throw new BusinessException("用户名已存在");
+        }
+
+        SysUser updateUser = new SysUser();
+        updateUser.setId(id);
+        updateUser.setUsername(username);
+
+        sysUserMapper.updateById(updateUser);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(UserChangePasswordDTO changePasswordDTO) {
+        Long userId = SecurityUtils.getUserId();
+
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        if (!passwordEncoder.matches(changePasswordDTO.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("旧密码不正确");
+        }
+
+        if (passwordEncoder.matches(changePasswordDTO.getNewPassword(), user.getPassword())) {
+            throw new BusinessException("新密码不能和旧密码相同");
+        }
+
+        SysUser updateUser = new SysUser();
+        updateUser.setId(userId);
+        updateUser.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
+
+        sysUserMapper.updateById(updateUser);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(Long id, UserResetPasswordDTO resetPasswordDTO) {
+        SysUser user = sysUserMapper.selectById(id);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        SysUser updateUser = new SysUser();
+        updateUser.setId(id);
+        updateUser.setPassword(passwordEncoder.encode(resetPasswordDTO.getNewPassword()));
+
+        sysUserMapper.updateById(updateUser);
     }
 
     private UserVO toVO(SysUser user) {

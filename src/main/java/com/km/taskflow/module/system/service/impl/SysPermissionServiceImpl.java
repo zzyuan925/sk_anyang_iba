@@ -9,6 +9,7 @@ import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
 import com.km.taskflow.module.system.dto.PermissionCreateDTO;
 import com.km.taskflow.module.system.dto.PermissionQueryDTO;
+import com.km.taskflow.module.system.dto.PermissionUpdateCodeDTO;
 import com.km.taskflow.module.system.dto.PermissionUpdateDTO;
 import com.km.taskflow.module.system.entity.SysPermission;
 import com.km.taskflow.module.system.entity.SysRolePermission;
@@ -162,6 +163,31 @@ public class SysPermissionServiceImpl implements SysPermissionService {
                 .orderByAsc(SysPermission::getId));
 
         return permissions.stream().map(this::toOptionVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePermissionCode(Long id, PermissionUpdateCodeDTO updateCodeDTO) {
+        SysPermission permission = sysPermissionMapper.selectById(id);
+        if (permission == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "权限不存在");
+        }
+
+        String permissionCode = updateCodeDTO.getPermissionCode().trim();
+
+        Long count = sysPermissionMapper.selectCount(new LambdaQueryWrapper<SysPermission>()
+                .eq(SysPermission::getPermissionCode, permissionCode)
+                .ne(SysPermission::getId, id));
+
+        if (count > 0) {
+            throw new BusinessException("权限编码已存在");
+        }
+
+        SysPermission updatePermission = new SysPermission();
+        updatePermission.setId(id);
+        updatePermission.setPermissionCode(permissionCode);
+
+        sysPermissionMapper.updateById(updatePermission);
     }
 
     private PermissionVO toVO(SysPermission permission) {

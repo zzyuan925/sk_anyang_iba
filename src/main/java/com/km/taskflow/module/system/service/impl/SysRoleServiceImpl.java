@@ -7,10 +7,7 @@ import com.km.taskflow.common.constant.SystemConstants;
 import com.km.taskflow.common.exception.BusinessException;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.ResultCode;
-import com.km.taskflow.module.system.dto.RoleAssignPermissionDTO;
-import com.km.taskflow.module.system.dto.RoleCreateDTO;
-import com.km.taskflow.module.system.dto.RoleQueryDTO;
-import com.km.taskflow.module.system.dto.RoleUpdateDTO;
+import com.km.taskflow.module.system.dto.*;
 import com.km.taskflow.module.system.entity.SysPermission;
 import com.km.taskflow.module.system.entity.SysRole;
 import com.km.taskflow.module.system.entity.SysRolePermission;
@@ -225,6 +222,35 @@ public class SysRoleServiceImpl implements SysRoleService {
                 .toList();
 
         sysRolePermissionMapper.insertBatch(rolePermissionList);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRoleCode(Long id, RoleUpdateCodeDTO updateCodeDTO) {
+        SysRole role = sysRoleMapper.selectById(id);
+        if (role == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
+        }
+
+        if (SystemConstants.ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
+            throw new BusinessException("系统内置管理员角色编码不允许修改");
+        }
+
+        String roleCode = updateCodeDTO.getRoleCode().trim();
+
+        Long count = sysRoleMapper.selectCount(new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getRoleCode, roleCode)
+                .ne(SysRole::getId, id));
+
+        if (count > 0) {
+            throw new BusinessException("角色编码已存在");
+        }
+
+        SysRole updateRole = new SysRole();
+        updateRole.setId(id);
+        updateRole.setRoleCode(roleCode);
+
+        sysRoleMapper.updateById(updateRole);
     }
 
     private PermissionVO toPermissionVO(SysPermission permission) {

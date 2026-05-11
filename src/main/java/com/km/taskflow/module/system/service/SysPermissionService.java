@@ -3,6 +3,7 @@ package com.km.taskflow.module.system.service;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.module.system.dto.PermissionCreateDTO;
 import com.km.taskflow.module.system.dto.PermissionQueryDTO;
+import com.km.taskflow.module.system.dto.PermissionUpdateCodeDTO;
 import com.km.taskflow.module.system.dto.PermissionUpdateDTO;
 import com.km.taskflow.module.system.vo.PermissionOptionVO;
 import com.km.taskflow.module.system.vo.PermissionVO;
@@ -38,4 +39,9 @@ public interface SysPermissionService {
      * 下拉权限列表
      */
     List<PermissionOptionVO> listEnabledPermissionOptions();
+
+    /**
+     * 修改权限编码
+     */
+    void updatePermissionCode(Long id, PermissionUpdateCodeDTO updateCodeDTO);
 }
