@@ -1,5 +1,7 @@
 package com.km.taskflow.module.system.controller;
 
+import com.km.taskflow.common.log.OperationLog;
+import com.km.taskflow.common.log.OperationType;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.Result;
 import com.km.taskflow.module.system.dto.PermissionCreateDTO;
@@ -34,6 +36,7 @@ public class SysPermissionController {
 
     private final SysPermissionService sysPermissionService;
 
+    @OperationLog(module = "权限管理", name = "分页查询权限", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "分页查询权限", description = "根据权限名称、权限编码、权限类型、状态进行分页查询")
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('system:permission:list')")
@@ -41,6 +44,7 @@ public class SysPermissionController {
         return Result.success(sysPermissionService.pagePermissions(queryDTO));
     }
 
+    @OperationLog(module = "权限管理", name = "分页查询权限", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "获取权限详情")
     @Parameter(name = "id", description = "权限ID", required = true, example = "1")
     @GetMapping("/{id}")
@@ -49,6 +53,7 @@ public class SysPermissionController {
         return Result.success(sysPermissionService.getPermissionById(id));
     }
 
+    @OperationLog(module = "权限管理", name = "创建权限", type = OperationType.CREATE, recordResult = false)
     @Operation(summary = "创建权限", description = "新增系统权限，成功后返回主键ID")
     @PostMapping
     @PreAuthorize("hasAuthority('system:permission:create')")
@@ -56,6 +61,7 @@ public class SysPermissionController {
         return Result.success(sysPermissionService.createPermission(createDTO));
     }
 
+    @OperationLog(module = "权限管理", name = "修改权限", type = OperationType.UPDATE, recordResult = false)
     @Operation(summary = "修改权限", description = "根据 ID 修改权限信息")
     @PutMapping
     @PreAuthorize("hasAuthority('system:permission:update')")
@@ -64,6 +70,7 @@ public class SysPermissionController {
         return Result.success();
     }
 
+    @OperationLog(module = "权限管理", name = "删除权限", type = OperationType.DELETE, recordResult = false)
     @Operation(summary = "逻辑删除权限", description = "根据 ID 逻辑删除权限")
     @Parameter(name = "id", description = "权限ID", required = true, example = "1")
     @DeleteMapping("/{id}")
@@ -73,13 +80,15 @@ public class SysPermissionController {
         return Result.success();
     }
 
+    @OperationLog(module = "权限管理", name = "查询启用权限下拉选项", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "查询启用权限下拉选项", description = "用于角色分配权限时选择权限")
     @GetMapping("/options")
     @PreAuthorize("hasAuthority('system:permission:options')")
     public Result<List<PermissionOptionVO>> options() {
         return Result.success(sysPermissionService.listEnabledPermissionOptions());
     }
-    
+
+    @OperationLog(module = "权限管理", name = "修改权限编码", type = OperationType.UPDATE, recordResult = false)
     @Operation(summary = "修改权限编码", description = "根据权限ID修改权限编码")
     @PreAuthorize("hasAuthority('system:permission:updateCode')")
     @PutMapping("/{id}/code")

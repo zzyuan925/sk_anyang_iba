@@ -1,5 +1,7 @@
 package com.km.taskflow.module.system.controller;
 
+import com.km.taskflow.common.log.OperationLog;
+import com.km.taskflow.common.log.OperationType;
 import com.km.taskflow.common.result.Result;
 import com.km.taskflow.common.result.ResultCode;
 import com.km.taskflow.module.system.dto.LoginDTO;
@@ -35,6 +37,7 @@ public class AuthController {
 
     private final JwtUtils jwtUtils;
 
+    @OperationLog(module = "认证模块", name = "用户登录", type = OperationType.LOGIN, recordResult = false)
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<LoginVO> login(@RequestBody @Valid LoginDTO loginDTO) {

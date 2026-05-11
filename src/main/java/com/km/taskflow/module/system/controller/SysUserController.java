@@ -1,5 +1,7 @@
 package com.km.taskflow.module.system.controller;
 
+import com.km.taskflow.common.log.OperationLog;
+import com.km.taskflow.common.log.OperationType;
 import com.km.taskflow.common.page.PageResult;
 import com.km.taskflow.common.result.Result;
 import com.km.taskflow.module.system.dto.*;
@@ -31,6 +33,7 @@ public class SysUserController {
 
     private final SysUserService sysUserService;
 
+    @OperationLog(module = "用户管理", name = "分页查询用户", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "分页查询用户", description = "根据用户名、姓名、状态进行模糊分页查询")
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('system:user:list')")
@@ -38,6 +41,7 @@ public class SysUserController {
         return Result.success(sysUserService.pageUsers(queryDTO));
     }
 
+    @OperationLog(module = "用户管理", name = "获取用户详情", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "获取用户详情")
     @Parameter(name = "id", description = "用户唯一标识", required = true, example = "1")
     @GetMapping("/{id}")
@@ -46,6 +50,7 @@ public class SysUserController {
         return Result.success(sysUserService.getUserById(id));
     }
 
+    @OperationLog(module = "用户管理", name = "创建用户", type = OperationType.CREATE, recordResult = false)
     @Operation(summary = "创建用户", description = "新增系统用户，成功后返回主键ID")
     @PostMapping
     @PreAuthorize("hasAuthority('system:user:create')")
@@ -53,6 +58,7 @@ public class SysUserController {
         return Result.success(sysUserService.createUser(createDTO));
     }
 
+    @OperationLog(module = "用户管理", name = "修改用户", type = OperationType.UPDATE)
     @Operation(summary = "修改用户", description = "根据 ID 修改用户信息")
     @PutMapping
     @PreAuthorize("hasAuthority('system:user:update')")
@@ -61,6 +67,7 @@ public class SysUserController {
         return Result.success();
     }
 
+    @OperationLog(module = "用户管理", name = "删除用户", type = OperationType.DELETE)
     @Operation(summary = "逻辑删除用户", description = "根据 ID 逻辑删除用户，数据不会从数据库彻底抹除")
     @Parameter(name = "id", description = "用户唯一标识", required = true, example = "1")
     @DeleteMapping("/{id}")
@@ -69,7 +76,8 @@ public class SysUserController {
         sysUserService.deleteUser(id);
         return Result.success();
     }
-    
+
+    @OperationLog(module = "用户管理", name = "查询用户已绑定角色", type = OperationType.QUERY, recordResult = false)
     @Operation(summary = "查询用户已绑定角色", description = "根据用户ID查询该用户拥有的角色列表")
     @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
     @GetMapping("/{userId}/roles")
@@ -78,6 +86,7 @@ public class SysUserController {
         return Result.success(sysUserService.listUserRoles(userId));
     }
 
+    @OperationLog(module = "用户管理", name = "给用户分配角色", type = OperationType.ASSIGN, recordResult = false)
     @Operation(summary = "给用户分配角色", description = "重新分配用户角色，会覆盖原有角色")
     @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
     @PutMapping("/{userId}/roles")
@@ -89,6 +98,7 @@ public class SysUserController {
         return Result.success();
     }
 
+    @OperationLog(module = "用户管理", name = "修改用户名", type = OperationType.UPDATE, recordResult = false)
     @Operation(summary = "修改用户名", description = "根据用户ID修改登录用户名")
     @PreAuthorize("hasAuthority('system:user:updateUsername')")
     @PutMapping("/{id}/username")
@@ -98,6 +108,7 @@ public class SysUserController {
         return Result.success();
     }
 
+    @OperationLog(module = "用户管理", name = "当前用户修改自己的密码", type = OperationType.CHANGE_PASSWORD, recordResult = false)
     @Operation(summary = "当前用户修改自己的密码")
     @PreAuthorize("hasAuthority('system:user:changePassword')")
     @PutMapping("/password")
@@ -106,6 +117,7 @@ public class SysUserController {
         return Result.success();
     }
 
+    @OperationLog(module = "用户管理", name = "管理员重置用户密码", type = OperationType.RESET_PASSWORD, recordResult = false)
     @Operation(summary = "管理员重置用户密码")
     @PreAuthorize("hasAuthority('system:user:resetPassword')")
     @PutMapping("/{id}/reset-password")
