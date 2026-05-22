@@ -8,11 +8,11 @@
 		<version>3.3.8</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.km</groupId>
-	<artifactId>taskflow</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>taskflow</name>
-	<description>taskflow</description>
+	<groupId>com.sk</groupId>
+	<artifactId>sk_anyang_iba</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<name>iba</name>
+	<description>iba</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>

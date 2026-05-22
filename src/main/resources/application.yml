@@ -2,10 +2,10 @@ server:
   port: 8080
 spring:
   application:
-    name: taskflow
+    name: iba
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/taskflow?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://localhost:3306/sk_anyang_iba?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
     password: ${MYSQL_PASSWORD:root}
   data:
@@ -16,7 +16,7 @@ spring:
       timeout: 3000ms
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.km.taskflow.module.*.entity
+  type-aliases-package: com.sk.iba.module.*.entity
   configuration:
     map-underscore-to-camel-case: true #自动开启数据库下划线命名到 Java 驼峰命名的映射
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl #打印sql
@@ -28,7 +28,7 @@ mybatis-plus:
       logic-not-delete-value: 0 #不删除
 knife4j:
   enable: true
-taskflow:
+iba:
   jwt:
-    secret: taskflow-taskflow-taskflow-taskflow-2026-secret-key
+    secret: sk-iba-intelligent-behavior-analysis-system-secret-2026
     expire-minutes: 1440

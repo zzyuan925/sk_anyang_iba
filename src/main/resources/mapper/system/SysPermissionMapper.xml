@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.sk.taskflow.module.system.mapper.SysPermissionMapper">
+<mapper namespace="com.sk.iba.module.system.mapper.SysPermissionMapper">
 
     <select id="selectPermissionCodesByUserId" resultType="java.lang.String">
         SELECT DISTINCT p.permission_code
