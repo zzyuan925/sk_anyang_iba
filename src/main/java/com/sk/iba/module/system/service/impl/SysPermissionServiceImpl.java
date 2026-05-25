@@ -1,14 +1,11 @@
 package com.sk.iba.module.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sk.iba.common.constant.SystemConstants;
 import com.sk.iba.common.enums.PermissionTypeEnum;
+import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
-import com.sk.iba.common.page.PageResult;
-import com.sk.iba.common.result.ResultCode;
 import com.sk.iba.module.system.dto.PermissionCreateDTO;
 import com.sk.iba.module.system.dto.PermissionQueryDTO;
 import com.sk.iba.module.system.dto.PermissionUpdateCodeDTO;
@@ -24,8 +21,10 @@ import com.sk.iba.module.system.vo.PermissionOptionVO;
 import com.sk.iba.module.system.vo.PermissionTreeVO;
 import com.sk.iba.module.system.vo.PermissionVO;
 import com.sk.iba.security.LoginUserCacheService;
+import com.sk.iba.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -184,12 +183,58 @@ public class SysPermissionServiceImpl implements SysPermissionService {
 
     @Override
     public List<PermissionOptionVO> listEnabledPermissionOptions() {
-        List<SysPermission> permissions = sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
-                .eq(SysPermission::getStatus, StatusEnum.ENABLED.getCode())
-                .orderByAsc(SysPermission::getParentId)
-                .orderByAsc(SysPermission::getId));
+        List<SysPermission> allEnabledPermissions = sysPermissionMapper.selectList(
+                new LambdaQueryWrapper<SysPermission>()
+                        .eq(SysPermission::getStatus, StatusEnum.ENABLED.getCode())
+                        .orderByAsc(SysPermission::getParentId)
+                        .orderByAsc(SysPermission::getId)
+        );
 
-        return permissions.stream().map(this::toOptionVO).toList();
+        if (allEnabledPermissions.isEmpty()) {
+            return List.of();
+        }
+
+        if (SecurityUtils.isSuperAdmin()) {
+            return allEnabledPermissions.stream().map(this::toOptionVO).toList();
+        }
+
+        Set<String> currentPermissionCodes = SecurityUtils.getLoginUser().getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        if (currentPermissionCodes.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, SysPermission> permissionMap = allEnabledPermissions.stream()
+                .collect(Collectors.toMap(SysPermission::getId, permission -> permission));
+
+        Set<Long> visiblePermissionIds = new HashSet<>();
+
+        for (SysPermission permission : allEnabledPermissions) {
+            if (!currentPermissionCodes.contains(permission.getPermissionCode())) {
+                continue;
+            }
+
+            visiblePermissionIds.add(permission.getId());
+
+            Long parentId = permission.getParentId();
+            while (parentId != null && !SystemConstants.ROOT_PARENT_ID.equals(parentId)) {
+                SysPermission parent = permissionMap.get(parentId);
+                if (parent == null) {
+                    break;
+                }
+
+                visiblePermissionIds.add(parent.getId());
+                parentId = parent.getParentId();
+            }
+        }
+
+        return allEnabledPermissions.stream()
+                .filter(permission -> visiblePermissionIds.contains(permission.getId()))
+                .map(this::toOptionVO)
+                .toList();
     }
 
     @Override

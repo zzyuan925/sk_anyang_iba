@@ -2,7 +2,7 @@ package com.sk.iba.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sk.iba.common.result.Result;
-import com.sk.iba.common.result.ResultCode;
+import com.sk.iba.common.enums.ResultCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

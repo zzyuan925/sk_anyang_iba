@@ -1,7 +1,8 @@
 package com.sk.iba.security;
 
+import com.sk.iba.common.constant.SystemConstants;
+import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.exception.BusinessException;
-import com.sk.iba.common.result.ResultCode;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -36,5 +37,9 @@ public class SecurityUtils {
 
     public static String getUsername() {
         return getLoginUser().getUsername();
+    }
+
+    public static boolean isSuperAdmin() {
+        return SystemConstants.ADMIN_USER_ID.equals(getUserId());
     }
 }

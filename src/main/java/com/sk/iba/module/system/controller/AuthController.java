@@ -1,7 +1,7 @@
 package com.sk.iba.module.system.controller;
 
 import com.sk.iba.common.result.Result;
-import com.sk.iba.common.result.ResultCode;
+import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.module.system.dto.LoginDTO;
 import com.sk.iba.module.system.vo.CurrentUserVO;
 import com.sk.iba.module.system.vo.LoginVO;
@@ -59,11 +59,11 @@ public class AuthController {
 
             return Result.success(loginVO);
         } catch (DisabledException e) {
-            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "用户已被禁用");
+            return Result.fail(ResultCode.FAIL.getCode(), "用户已被禁用");
         } catch (BadCredentialsException | UsernameNotFoundException e) {
-            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
+            return Result.fail(ResultCode.FAIL.getCode(), "用户名或密码错误");
         } catch (AuthenticationException e) {
-            return Result.fail(ResultCode.UNAUTHORIZED.getCode(), "认证失败，请重试");
+            return Result.fail(ResultCode.FAIL.getCode(), "认证失败，请重试");
         }
     }
 

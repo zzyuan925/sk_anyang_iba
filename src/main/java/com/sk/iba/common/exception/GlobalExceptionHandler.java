@@ -1,7 +1,7 @@
 package com.sk.iba.common.exception;
 
 import com.sk.iba.common.result.Result;
-import com.sk.iba.common.result.ResultCode;
+import com.sk.iba.common.enums.ResultCode;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;

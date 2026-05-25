@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sk.iba.common.constant.SystemConstants;
+import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
-import com.sk.iba.common.result.ResultCode;
 import com.sk.iba.module.system.dto.*;
 import com.sk.iba.module.system.entity.SysPermission;
 import com.sk.iba.module.system.entity.SysRole;
@@ -22,8 +22,10 @@ import com.sk.iba.module.system.vo.PermissionVO;
 import com.sk.iba.module.system.vo.RoleOptionVO;
 import com.sk.iba.module.system.vo.RoleVO;
 import com.sk.iba.security.LoginUserCacheService;
+import com.sk.iba.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -55,13 +57,15 @@ public class SysRoleServiceImpl implements SysRoleService {
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .like(StringUtils.hasText(queryDTO.getRoleCode()), SysRole::getRoleCode, queryDTO.getRoleCode())
-                .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())
-                .orderByDesc(SysRole::getCreateTime);
+                .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus());
 
+        if (!SecurityUtils.isSuperAdmin()) {
+            wrapper.eq(SysRole::getCreateBy, SecurityUtils.getUserId());
+        }
+        wrapper.orderByDesc(SysRole::getCreateTime);
+        
         Page<SysRole> rolePage = sysRoleMapper.selectPage(page, wrapper);
-
         IPage<RoleVO> voPage = rolePage.convert(this::toVO);
-
         return PageResult.of(voPage);
     }
 
@@ -71,6 +75,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
+        checkRoleDataPermission(role);
         return toVO(role);
     }
 
@@ -114,7 +119,8 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (oldRole == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
-
+        checkRoleDataPermission(oldRole);
+        
         SysRole role = new SysRole();
         BeanUtils.copyProperties(updateDTO, role);
 
@@ -129,7 +135,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
-
+        checkRoleDataPermission(role);
         // 先简单限制：系统内置 admin 角色不允许删除
         if (SystemConstants.ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
             throw new BusinessException("系统内置管理员角色不允许删除");
@@ -154,10 +160,36 @@ public class SysRoleServiceImpl implements SysRoleService {
 
     @Override
     public List<RoleOptionVO> listEnabledRoleOptions() {
-        List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getStatus, StatusEnum.ENABLED.getCode())
-                .orderByAsc(SysRole::getId));
+        LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<SysRole>()
+                .eq(SysRole::getStatus, StatusEnum.ENABLED.getCode());
 
+        if (!SecurityUtils.isSuperAdmin()) {
+            Long currentUserId = SecurityUtils.getUserId();
+
+            // 当前用户拥有的角色
+            List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                    new LambdaQueryWrapper<SysUserRole>()
+                            .eq(SysUserRole::getUserId, currentUserId)
+            );
+
+            Set<Long> currentUserRoleIds = userRoles.stream()
+                    .map(SysUserRole::getRoleId)
+                    .collect(Collectors.toSet());
+
+            if (currentUserRoleIds.isEmpty()) {
+                wrapper.eq(SysRole::getCreateBy, currentUserId);
+            } else {
+                wrapper.and(w -> w
+                        .eq(SysRole::getCreateBy, currentUserId)
+                        .or()
+                        .in(SysRole::getId, currentUserRoleIds)
+                );
+            }
+        }
+        
+        wrapper.orderByAsc(SysRole::getId);
+        
+        List<SysRole> roles = sysRoleMapper.selectList(wrapper);
         return roles.stream().map(this::toOptionVO).toList();
     }
 
@@ -167,6 +199,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
+        checkRoleDataPermission(role);
 
         List<SysRolePermission> rolePermissions = sysRolePermissionMapper.selectList(new LambdaQueryWrapper<SysRolePermission>()
                 .eq(SysRolePermission::getRoleId, roleId));
@@ -196,6 +229,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
+        checkRoleDataPermission(role);
         if (!StatusEnum.isEnabled(role.getStatus())) {
             throw new BusinessException("不能给禁用角色分配权限");
         }
@@ -205,6 +239,7 @@ public class SysRoleServiceImpl implements SysRoleService {
                 : new HashSet<>(assignPermissionDTO.getPermissionIds());
 
         Set<Long> permissionIds = fillParentPermissionIds(uniquePermissionIds);
+        checkAssignablePermissions(permissionIds);
 
         sysRolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
                 .eq(SysRolePermission::getRoleId, roleId));
@@ -274,6 +309,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         if (role == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "角色不存在");
         }
+        checkRoleDataPermission(role);
 
         if (SystemConstants.ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
             throw new BusinessException("系统内置管理员角色编码不允许修改");
@@ -325,6 +361,42 @@ public class SysRoleServiceImpl implements SysRoleService {
                 .toList();
 
         loginUserCacheService.deleteLoginUsers(userIds);
+    }
+
+    private void checkRoleDataPermission(SysRole role) {
+        if (SecurityUtils.isSuperAdmin()) {
+            return;
+        }
+
+        Long currentUserId = SecurityUtils.getUserId();
+
+        if (!currentUserId.equals(role.getCreateBy())) {
+            throw new BusinessException("无权操作该角色");
+        }
+    }
+
+    private void checkAssignablePermissions(Set<Long> permissionIds) {
+        if (permissionIds == null || permissionIds.isEmpty() || SecurityUtils.isSuperAdmin()) {
+            return;
+        }
+
+        Set<String> currentPermissionCodes = SecurityUtils.getLoginUser().getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        if (currentPermissionCodes.isEmpty()) {
+            throw new BusinessException("不能分配无权管理的权限");
+        }
+
+        List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(permissionIds);
+
+        boolean hasNoPermission = permissions.stream()
+                .anyMatch(permission -> !currentPermissionCodes.contains(permission.getPermissionCode()));
+
+        if (hasNoPermission) {
+            throw new BusinessException("不能分配超出自身范围的权限");
+        }
     }
     
 }

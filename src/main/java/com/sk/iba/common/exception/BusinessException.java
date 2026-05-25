@@ -1,6 +1,6 @@
 package com.sk.iba.common.exception;
 
-import com.sk.iba.common.result.ResultCode;
+import com.sk.iba.common.enums.ResultCode;
 import lombok.Getter;
 
 /**

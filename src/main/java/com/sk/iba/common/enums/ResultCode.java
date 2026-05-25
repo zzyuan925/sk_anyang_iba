@@ -1,4 +1,4 @@
-package com.sk.iba.common.result;
+package com.sk.iba.common.enums;
 
 import lombok.Getter;
 

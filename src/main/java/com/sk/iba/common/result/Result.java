@@ -1,5 +1,6 @@
 package com.sk.iba.common.result;
 
+import com.sk.iba.common.enums.ResultCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

@@ -19,4 +19,9 @@ public class SystemConstants {
      * 系统内置管理员角色编码
      */
     public static final String ADMIN_ROLE_CODE = "admin";
+
+    /**
+     * 超级管理员ID
+     */
+    public static final Long ADMIN_USER_ID = 1L;
 }

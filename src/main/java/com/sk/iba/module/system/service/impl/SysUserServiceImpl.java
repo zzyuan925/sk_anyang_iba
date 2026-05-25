@@ -3,10 +3,10 @@ package com.sk.iba.module.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
-import com.sk.iba.common.result.ResultCode;
 import com.sk.iba.module.system.dto.*;
 import com.sk.iba.module.system.entity.SysRole;
 import com.sk.iba.module.system.entity.SysUser;
@@ -29,6 +29,7 @@ import org.springframework.util.StringUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author zzy
@@ -54,13 +55,21 @@ public class SysUserServiceImpl implements SysUserService {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(queryDTO.getUsername()), SysUser::getUsername, queryDTO.getUsername())
                 .like(StringUtils.hasText(queryDTO.getRealName()), SysUser::getRealName, queryDTO.getRealName())
-                .eq(queryDTO.getStatus() != null, SysUser::getStatus, queryDTO.getStatus())
-                .orderByDesc(SysUser::getCreateTime);
+                .eq(queryDTO.getStatus() != null, SysUser::getStatus, queryDTO.getStatus());
 
+        Long currentUserId = SecurityUtils.getUserId();
+        if (!SecurityUtils.isSuperAdmin()) {
+            wrapper.and(w -> w
+                    .eq(SysUser::getCreateBy, currentUserId)
+                    .or()
+                    .eq(SysUser::getId, currentUserId)
+            );
+        }
+
+        wrapper.orderByDesc(SysUser::getCreateTime);
+        
         Page<SysUser> userPage = sysUserMapper.selectPage(page, wrapper);
-
         IPage<UserVO> voPage = userPage.convert(this::toVO);
-
         return PageResult.of(voPage);
     }
 
@@ -70,6 +79,7 @@ public class SysUserServiceImpl implements SysUserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
+        checkUserDataPermission(user);
         return toVO(user);
     }
 
@@ -111,12 +121,25 @@ public class SysUserServiceImpl implements SysUserService {
         if (oldUser == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-
+        
+        checkUserDataPermission(oldUser);
+        
         SysUser user = new SysUser();
         BeanUtils.copyProperties(updateDTO, user);
 
         sysUserMapper.updateById(user);
-        loginUserCacheService.deleteLoginUser(updateDTO.getId());
+
+        // 状态改变了才清理缓存
+        if (isLoginStateChanged(oldUser, updateDTO)) {
+            loginUserCacheService.deleteLoginUser(updateDTO.getId());
+        }
+    }
+    
+    private boolean isLoginStateChanged(SysUser oldUser, UserUpdateDTO updateDTO) {
+        if (updateDTO.getStatus() != null && !updateDTO.getStatus().equals(oldUser.getStatus())) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -126,6 +149,8 @@ public class SysUserServiceImpl implements SysUserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
+
+        checkUserDataPermission(user);
 
         sysUserMapper.deleteById(id);
         loginUserCacheService.deleteLoginUser(id);
@@ -172,6 +197,8 @@ public class SysUserServiceImpl implements SysUserService {
             throw new BusinessException("不能给禁用用户分配角色");
         }
 
+        checkUserDataPermission(user);
+
         Set<Long> uniqueRoleIds = assignRoleDTO.getRoleIds() == null ? Set.of() : new HashSet<>(assignRoleDTO.getRoleIds());
         
         if (!uniqueRoleIds.isEmpty()) {
@@ -186,6 +213,8 @@ public class SysUserServiceImpl implements SysUserService {
             if (hasDisabledRole) {
                 throw new BusinessException("不能分配已禁用角色");
             }
+            
+            checkAssignableRoles(roles);
         }
 
         sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
@@ -285,5 +314,44 @@ public class SysUserServiceImpl implements SysUserService {
         RoleVO vo = new RoleVO();
         BeanUtils.copyProperties(role, vo);
         return vo;
+    }
+
+    private void checkUserDataPermission(SysUser user) {
+        if (SecurityUtils.isSuperAdmin()) {
+            return;
+        }
+
+        Long currentUserId = SecurityUtils.getUserId();
+
+        if (!currentUserId.equals(user.getCreateBy())) {
+            throw new BusinessException("无权给该用户分配角色");
+        }
+    }
+
+    private void checkAssignableRoles(List<SysRole> roles) {
+        if (SecurityUtils.isSuperAdmin() || roles == null || roles.isEmpty()) {
+            return;
+        }
+
+        Long currentUserId = SecurityUtils.getUserId();
+
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getUserId, currentUserId)
+        );
+
+        Set<Long> currentUserRoleIds = userRoles.stream()
+                .map(SysUserRole::getRoleId)
+                .collect(Collectors.toSet());
+
+        boolean hasNoPermissionRole = roles.stream().anyMatch(role -> {
+            boolean createdByMe = currentUserId.equals(role.getCreateBy());
+            boolean ownedByMe = currentUserRoleIds.contains(role.getId());
+            return !createdByMe && !ownedByMe;
+        });
+
+        if (hasNoPermissionRole) {
+            throw new BusinessException("不能分配无权管理的角色");
+        }
     }
 }
