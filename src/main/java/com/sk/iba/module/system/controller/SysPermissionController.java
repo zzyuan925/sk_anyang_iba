@@ -2,7 +2,6 @@ package com.sk.iba.module.system.controller;
 
 import com.sk.iba.common.log.OperationLog;
 import com.sk.iba.common.log.OperationType;
-import com.sk.iba.common.page.PageResult;
 import com.sk.iba.common.result.Result;
 import com.sk.iba.module.system.dto.PermissionCreateDTO;
 import com.sk.iba.module.system.dto.PermissionQueryDTO;
@@ -10,6 +9,7 @@ import com.sk.iba.module.system.dto.PermissionUpdateCodeDTO;
 import com.sk.iba.module.system.dto.PermissionUpdateDTO;
 import com.sk.iba.module.system.service.SysPermissionService;
 import com.sk.iba.module.system.vo.PermissionOptionVO;
+import com.sk.iba.module.system.vo.PermissionTreeVO;
 import com.sk.iba.module.system.vo.PermissionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,12 +36,20 @@ public class SysPermissionController {
 
     private final SysPermissionService sysPermissionService;
 
-    @OperationLog(module = "权限管理", name = "分页查询权限", type = OperationType.QUERY, recordResult = false)
-    @Operation(summary = "分页查询权限", description = "根据权限名称、权限编码、权限类型、状态进行分页查询")
-    @GetMapping("/page")
+//    @OperationLog(module = "权限管理", name = "分页查询权限", type = OperationType.QUERY, recordResult = false)
+//    @Operation(summary = "分页查询权限", description = "根据权限名称、权限编码、权限类型、状态进行分页查询")
+//    @GetMapping("/page")
+//    @PreAuthorize("hasAuthority('system:permission:list')")
+//    public Result<PageResult<PermissionVO>> page(@ParameterObject @Validated PermissionQueryDTO queryDTO) {
+//        return Result.success(sysPermissionService.pagePermissions(queryDTO));
+//    }
+
+    @OperationLog(module = "权限管理", name = "树形查询权限", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "树形查询权限", description = "根据权限名称、权限编码、权限类型、状态查询权限树")
+    @GetMapping("/tree")
     @PreAuthorize("hasAuthority('system:permission:list')")
-    public Result<PageResult<PermissionVO>> page(@ParameterObject @Validated PermissionQueryDTO queryDTO) {
-        return Result.success(sysPermissionService.pagePermissions(queryDTO));
+    public Result<List<PermissionTreeVO>> tree(@ParameterObject @Validated PermissionQueryDTO queryDTO) {
+        return Result.success(sysPermissionService.treePermissions(queryDTO));
     }
 
     @OperationLog(module = "权限管理", name = "获取权限详情", type = OperationType.QUERY, recordResult = false)

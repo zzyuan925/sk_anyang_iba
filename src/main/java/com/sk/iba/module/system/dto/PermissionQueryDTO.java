@@ -1,9 +1,7 @@
 package com.sk.iba.module.system.dto;
 
-import com.sk.iba.common.page.PageQuery;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 /**
  * 权限分页查询参数
@@ -12,8 +10,7 @@ import lombok.EqualsAndHashCode;
  */
 @Schema(description = "权限分页查询参数")
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class PermissionQueryDTO extends PageQuery {
+public class PermissionQueryDTO {
 
     @Schema(description = "权限名称", example = "用户查询")
     private String permissionName;
