@@ -20,5 +20,6 @@ public class RoleAssignPermissionDTO {
     private Long roleId;
 
     @Schema(description = "权限ID列表", example = "[1,2,3]")
+    @NotNull(message = "权限ID列表不能为空")
     private List<Long> permissionIds;
 }

@@ -20,5 +20,6 @@ public class UserAssignRoleDTO {
     private Long userId;
 
     @Schema(description = "角色ID列表", example = "[1,2]")
+    @NotNull(message = "角色ID列表不能为空")
     private List<Long> roleIds;
 }
