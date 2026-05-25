@@ -3,6 +3,7 @@ package com.sk.iba.module.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.sk.iba.common.constant.SystemConstants;
 import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
@@ -116,6 +117,11 @@ public class SysUserServiceImpl implements SysUserService {
         if (updateDTO.getStatus() != null && !StatusEnum.isValid(updateDTO.getStatus())) {
             throw new BusinessException("用户状态不合法");
         }
+        if (SystemConstants.ADMIN_USER_ID.equals(updateDTO.getId())
+                && updateDTO.getStatus() != null
+                && !StatusEnum.isEnabled(updateDTO.getStatus())) {
+            throw new BusinessException("超级管理员不允许禁用");
+        }
         
         SysUser oldUser = sysUserMapper.selectById(updateDTO.getId());
         if (oldUser == null) {
@@ -149,7 +155,9 @@ public class SysUserServiceImpl implements SysUserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-
+        if (SystemConstants.ADMIN_USER_ID.equals(id)) {
+            throw new BusinessException("超级管理员不允许删除");
+        }
         checkUserDataPermission(user);
 
         sysUserMapper.deleteById(id);
@@ -166,6 +174,8 @@ public class SysUserServiceImpl implements SysUserService {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
 
+        checkUserDataPermission(user);
+        
         List<SysUserRole> userRoles = sysUserRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getUserId, userId));
 
@@ -197,7 +207,7 @@ public class SysUserServiceImpl implements SysUserService {
             throw new BusinessException("不能给禁用用户分配角色");
         }
 
-        checkUserDataPermission(user);
+        checkUserRoleAssignTargetPermission(user);
 
         Set<Long> uniqueRoleIds = assignRoleDTO.getRoleIds() == null ? Set.of() : new HashSet<>(assignRoleDTO.getRoleIds());
         
@@ -240,11 +250,13 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateUsername(Long id, UserUpdateUsernameDTO updateUsernameDTO) {
+        
         SysUser user = sysUserMapper.selectById(id);
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-
+        checkUserDataPermission(user);
+        
         String username = updateUsernameDTO.getUsername().trim();
 
         Long count = sysUserMapper.selectCount(new LambdaQueryWrapper<SysUser>()
@@ -296,7 +308,7 @@ public class SysUserServiceImpl implements SysUserService {
         if (user == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
-
+        checkUserDataPermission(user);
         SysUser updateUser = new SysUser();
         updateUser.setId(id);
         updateUser.setPassword(passwordEncoder.encode(resetPasswordDTO.getNewPassword()));
@@ -323,8 +335,11 @@ public class SysUserServiceImpl implements SysUserService {
 
         Long currentUserId = SecurityUtils.getUserId();
 
-        if (!currentUserId.equals(user.getCreateBy())) {
-            throw new BusinessException("无权给该用户分配角色");
+        boolean self = currentUserId.equals(user.getId());
+        boolean createdByMe = currentUserId.equals(user.getCreateBy());
+
+        if (!self && !createdByMe) {
+            throw new BusinessException("无权操作该用户");
         }
     }
 
@@ -352,6 +367,18 @@ public class SysUserServiceImpl implements SysUserService {
 
         if (hasNoPermissionRole) {
             throw new BusinessException("不能分配无权管理的角色");
+        }
+    }
+
+    private void checkUserRoleAssignTargetPermission(SysUser user) {
+        if (SecurityUtils.isSuperAdmin()) {
+            return;
+        }
+
+        Long currentUserId = SecurityUtils.getUserId();
+
+        if (!currentUserId.equals(user.getCreateBy())) {
+            throw new BusinessException("无权给该用户分配角色");
         }
     }
 }

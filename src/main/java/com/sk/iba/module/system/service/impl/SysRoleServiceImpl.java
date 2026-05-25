@@ -125,7 +125,14 @@ public class SysRoleServiceImpl implements SysRoleService {
         BeanUtils.copyProperties(updateDTO, role);
 
         sysRoleMapper.updateById(role);
-        clearUserCacheByRoleId(updateDTO.getId());
+        if (isRoleLoginStateChanged(oldRole, updateDTO)) {
+            clearUserCacheByRoleId(updateDTO.getId());
+        }
+    }
+
+    private boolean isRoleLoginStateChanged(SysRole oldRole, RoleUpdateDTO updateDTO) {
+        return updateDTO.getStatus() != null
+                && !updateDTO.getStatus().equals(oldRole.getStatus());
     }
 
     @Override
