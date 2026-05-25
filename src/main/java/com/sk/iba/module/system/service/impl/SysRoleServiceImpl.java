@@ -28,9 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author zzy
@@ -201,28 +200,17 @@ public class SysRoleServiceImpl implements SysRoleService {
             throw new BusinessException("不能给禁用角色分配权限");
         }
 
-        Set<Long> uniquePermissionIds = assignPermissionDTO.getPermissionIds() == null ? Set.of() : new HashSet<>(assignPermissionDTO.getPermissionIds());
+        Set<Long> uniquePermissionIds = assignPermissionDTO.getPermissionIds() == null
+                ? Collections.emptySet()
+                : new HashSet<>(assignPermissionDTO.getPermissionIds());
 
-        if (!uniquePermissionIds.isEmpty()) {
-            List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(uniquePermissionIds);
-
-            if (permissions.size() != uniquePermissionIds.size()) {
-                throw new BusinessException("存在无效权限");
-            }
-
-            boolean hasDisabledPermission = permissions.stream()
-                    .anyMatch(permission -> !StatusEnum.isEnabled(permission.getStatus()));
-
-            if (hasDisabledPermission) {
-                throw new BusinessException("不能分配已禁用权限");
-            }
-        }
+        Set<Long> permissionIds = fillParentPermissionIds(uniquePermissionIds);
 
         sysRolePermissionMapper.delete(new LambdaQueryWrapper<SysRolePermission>()
                 .eq(SysRolePermission::getRoleId, roleId));
 
-        if (!uniquePermissionIds.isEmpty()) {
-            List<SysRolePermission> rolePermissionList = uniquePermissionIds.stream()
+        if (!permissionIds.isEmpty()) {
+            List<SysRolePermission> rolePermissionList = permissionIds.stream()
                     .map(permissionId -> {
                         SysRolePermission rolePermission = new SysRolePermission();
                         rolePermission.setRoleId(roleId);
@@ -233,8 +221,50 @@ public class SysRoleServiceImpl implements SysRoleService {
 
             sysRolePermissionMapper.insertBatch(rolePermissionList);
         }
+
         // 不管是清空权限，还是重新分配权限，都要清理拥有该角色的用户缓存
         clearUserCacheByRoleId(roleId);
+    }
+
+    // 补齐父权限
+    private Set<Long> fillParentPermissionIds(Collection<Long> permissionIds) {
+        if (permissionIds == null || permissionIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        // 一次性查出全部启用、未删除权限
+        List<SysPermission> allPermissions = sysPermissionMapper.selectList(
+                new LambdaQueryWrapper<SysPermission>()
+                        .eq(SysPermission::getStatus, StatusEnum.ENABLED.getCode())
+        );
+
+        Map<Long, SysPermission> permissionMap = allPermissions.stream()
+                .collect(Collectors.toMap(SysPermission::getId, permission -> permission));
+
+        for (Long permissionId : permissionIds) {
+            if (!permissionMap.containsKey(permissionId)) {
+                throw new BusinessException("存在无效、禁用或已删除的权限");
+            }
+        }
+
+        Set<Long> finalPermissionIds = new HashSet<>(permissionIds);
+
+        for (Long permissionId : permissionIds) {
+            SysPermission permission = permissionMap.get(permissionId);
+
+            Long parentId = permission.getParentId();
+            while (parentId != null && parentId != 0L) {
+                SysPermission parent = permissionMap.get(parentId);
+                if (parent == null) {
+                    throw new BusinessException("权限父级不存在、已禁用或已删除");
+                }
+
+                finalPermissionIds.add(parent.getId());
+                parentId = parent.getParentId();
+            }
+        }
+
+        return finalPermissionIds;
     }
 
     @Override

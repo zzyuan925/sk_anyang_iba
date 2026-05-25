@@ -21,6 +21,7 @@ import com.sk.iba.module.system.mapper.SysRolePermissionMapper;
 import com.sk.iba.module.system.mapper.SysUserRoleMapper;
 import com.sk.iba.module.system.service.SysPermissionService;
 import com.sk.iba.module.system.vo.PermissionOptionVO;
+import com.sk.iba.module.system.vo.PermissionTreeVO;
 import com.sk.iba.module.system.vo.PermissionVO;
 import com.sk.iba.security.LoginUserCacheService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author zzy
@@ -46,24 +48,24 @@ public class SysPermissionServiceImpl implements SysPermissionService {
 
     private final LoginUserCacheService loginUserCacheService;
 
-    @Override
-    public PageResult<PermissionVO> pagePermissions(PermissionQueryDTO queryDTO) {
-        Page<SysPermission> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
-
-        LambdaQueryWrapper<SysPermission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getPermissionName()), SysPermission::getPermissionName, queryDTO.getPermissionName())
-                .like(StringUtils.hasText(queryDTO.getPermissionCode()), SysPermission::getPermissionCode, queryDTO.getPermissionCode())
-                .eq(queryDTO.getPermissionType() != null, SysPermission::getPermissionType, queryDTO.getPermissionType())
-                .eq(queryDTO.getStatus() != null, SysPermission::getStatus, queryDTO.getStatus())
-                .orderByAsc(SysPermission::getParentId)
-                .orderByAsc(SysPermission::getId);
-
-        Page<SysPermission> permissionPage = sysPermissionMapper.selectPage(page, wrapper);
-
-        IPage<PermissionVO> voPage = permissionPage.convert(this::toVO);
-
-        return PageResult.of(voPage);
-    }
+//    @Override
+//    public PageResult<PermissionVO> pagePermissions(PermissionQueryDTO queryDTO) {
+//        Page<SysPermission> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
+//
+//        LambdaQueryWrapper<SysPermission> wrapper = new LambdaQueryWrapper<>();
+//        wrapper.like(StringUtils.hasText(queryDTO.getPermissionName()), SysPermission::getPermissionName, queryDTO.getPermissionName())
+//                .like(StringUtils.hasText(queryDTO.getPermissionCode()), SysPermission::getPermissionCode, queryDTO.getPermissionCode())
+//                .eq(queryDTO.getPermissionType() != null, SysPermission::getPermissionType, queryDTO.getPermissionType())
+//                .eq(queryDTO.getStatus() != null, SysPermission::getStatus, queryDTO.getStatus())
+//                .orderByAsc(SysPermission::getParentId)
+//                .orderByAsc(SysPermission::getId);
+//
+//        Page<SysPermission> permissionPage = sysPermissionMapper.selectPage(page, wrapper);
+//
+//        IPage<PermissionVO> voPage = permissionPage.convert(this::toVO);
+//
+//        return PageResult.of(voPage);
+//    }
 
     @Override
     public PermissionVO getPermissionById(Long id) {
@@ -216,6 +218,149 @@ public class SysPermissionServiceImpl implements SysPermissionService {
         clearUserCacheByPermissionId(id);
     }
 
+    @Override
+    public List<PermissionTreeVO> treePermissions(PermissionQueryDTO queryDTO) {
+        List<SysPermission> permissions = sysPermissionMapper.selectList(
+                new LambdaQueryWrapper<SysPermission>()
+                        .orderByAsc(SysPermission::getParentId)
+                        .orderByAsc(SysPermission::getId)
+        );
+
+        if (permissions.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, SysPermission> permissionMap = permissions.stream()
+                .collect(Collectors.toMap(SysPermission::getId, permission -> permission));
+        Set<Long> visibleIds = filterVisiblePermissionIds(permissions, permissionMap, queryDTO);
+
+        List<PermissionTreeVO> voList = permissions.stream()
+                .filter(permission -> visibleIds.contains(permission.getId()))
+                .map(this::toTreeVO)
+                .toList();
+
+        Map<Long, PermissionTreeVO> voMap = voList.stream()
+                .collect(Collectors.toMap(PermissionTreeVO::getId, vo -> vo));
+
+        List<PermissionTreeVO> treeList = new ArrayList<>();
+
+        for (PermissionTreeVO vo : voList) {
+            Long parentId = vo.getParentId();
+
+            if (parentId == null || SystemConstants.ROOT_PARENT_ID.equals(parentId) || !voMap.containsKey(parentId)) {
+                treeList.add(vo);
+                continue;
+            }
+
+            PermissionTreeVO parent = voMap.get(parentId);
+            parent.getChildren().add(vo);
+        }
+
+        return treeList;
+    }
+
+    private Set<Long> filterVisiblePermissionIds(List<SysPermission> permissions,
+                                                 Map<Long, SysPermission> permissionMap,
+                                                 PermissionQueryDTO queryDTO) {
+        if (!hasPermissionQueryCondition(queryDTO)) {
+            return permissions.stream()
+                    .map(SysPermission::getId)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+
+        Set<Long> visibleIds = new LinkedHashSet<>();
+
+        for (SysPermission permission : permissions) {
+            if (!matchPermissionQuery(permission, queryDTO)) {
+                continue;
+            }
+
+            // 1. 命中的节点本身
+            visibleIds.add(permission.getId());
+
+            // 2. 命中子节点时，把父级一起带出来
+            addParentPermissionIds(permission, permissionMap, visibleIds);
+
+            // 3. 命中父节点时，把子级一起带出来
+            addChildPermissionIds(permission.getId(), permissions, visibleIds);
+        }
+
+        return visibleIds;
+    }
+
+    private boolean hasPermissionQueryCondition(PermissionQueryDTO queryDTO) {
+        if (queryDTO == null) {
+            return false;
+        }
+
+        return StringUtils.hasText(queryDTO.getPermissionName())
+                || StringUtils.hasText(queryDTO.getPermissionCode())
+                || queryDTO.getPermissionType() != null
+                || queryDTO.getStatus() != null;
+    }
+
+    private boolean matchPermissionQuery(SysPermission permission, PermissionQueryDTO queryDTO) {
+        if (queryDTO == null) {
+            return true;
+        }
+
+        if (StringUtils.hasText(queryDTO.getPermissionName())
+                && !permission.getPermissionName().contains(queryDTO.getPermissionName())) {
+            return false;
+        }
+
+        if (StringUtils.hasText(queryDTO.getPermissionCode())
+                && !permission.getPermissionCode().contains(queryDTO.getPermissionCode())) {
+            return false;
+        }
+
+        if (queryDTO.getPermissionType() != null
+                && !queryDTO.getPermissionType().equals(permission.getPermissionType())) {
+            return false;
+        }
+
+        if (queryDTO.getStatus() != null
+                && !queryDTO.getStatus().equals(permission.getStatus())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void addParentPermissionIds(SysPermission permission,
+                                        Map<Long, SysPermission> permissionMap,
+                                        Set<Long> visibleIds) {
+        Long parentId = permission.getParentId();
+
+        while (parentId != null && !SystemConstants.ROOT_PARENT_ID.equals(parentId)) {
+            SysPermission parent = permissionMap.get(parentId);
+            if (parent == null) {
+                break;
+            }
+
+            visibleIds.add(parent.getId());
+            parentId = parent.getParentId();
+        }
+    }
+
+    private void addChildPermissionIds(Long parentId,
+                                       List<SysPermission> permissions,
+                                       Set<Long> visibleIds) {
+        for (SysPermission permission : permissions) {
+            if (!parentId.equals(permission.getParentId())) {
+                continue;
+            }
+
+            visibleIds.add(permission.getId());
+            addChildPermissionIds(permission.getId(), permissions, visibleIds);
+        }
+    }
+
+    private PermissionTreeVO toTreeVO(SysPermission permission) {
+        PermissionTreeVO vo = new PermissionTreeVO();
+        BeanUtils.copyProperties(permission, vo);
+        return vo;
+    }
+    
     private PermissionVO toVO(SysPermission permission) {
         PermissionVO vo = new PermissionVO();
         BeanUtils.copyProperties(permission, vo);
