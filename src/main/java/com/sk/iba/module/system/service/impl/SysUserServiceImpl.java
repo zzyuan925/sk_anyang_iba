@@ -9,13 +9,10 @@ import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
 import com.sk.iba.module.system.dto.*;
-import com.sk.iba.module.system.entity.SysRole;
-import com.sk.iba.module.system.entity.SysUser;
-import com.sk.iba.module.system.entity.SysUserRole;
-import com.sk.iba.module.system.mapper.SysRoleMapper;
-import com.sk.iba.module.system.mapper.SysUserMapper;
-import com.sk.iba.module.system.mapper.SysUserRoleMapper;
+import com.sk.iba.module.system.entity.*;
+import com.sk.iba.module.system.mapper.*;
 import com.sk.iba.module.system.service.SysUserService;
+import com.sk.iba.module.system.vo.RegionVO;
 import com.sk.iba.module.system.vo.RoleVO;
 import com.sk.iba.module.system.vo.UserVO;
 import com.sk.iba.security.LoginUserCacheService;
@@ -48,6 +45,10 @@ public class SysUserServiceImpl implements SysUserService {
     private final PasswordEncoder passwordEncoder;
 
     private final LoginUserCacheService loginUserCacheService;
+
+    private final SysRegionMapper sysRegionMapper;
+
+    private final SysUserRegionMapper sysUserRegionMapper;
 
     @Override
     public PageResult<UserVO> pageUsers(UserQueryDTO queryDTO) {
@@ -165,6 +166,8 @@ public class SysUserServiceImpl implements SysUserService {
 
         sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getUserId, id));
+        sysUserRegionMapper.delete(new LambdaQueryWrapper<SysUserRegion>()
+                .eq(SysUserRegion::getUserId, id));
     }
 
     @Override
@@ -317,6 +320,90 @@ public class SysUserServiceImpl implements SysUserService {
         loginUserCacheService.deleteLoginUser(id);
     }
 
+    @Override
+    public List<RegionVO> listUserRegions(Long userId) {
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        checkUserDataPermission(user);
+
+        List<SysUserRegion> userRegions = sysUserRegionMapper.selectList(new LambdaQueryWrapper<SysUserRegion>()
+                .eq(SysUserRegion::getUserId, userId));
+
+        List<Long> regionIds = userRegions.stream()
+                .map(SysUserRegion::getRegionId)
+                .toList();
+
+        if (regionIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<SysRegion> regions = sysRegionMapper.selectList(new LambdaQueryWrapper<SysRegion>()
+                .in(SysRegion::getId, regionIds)
+                .orderByAsc(SysRegion::getParentId)
+                .orderByAsc(SysRegion::getSort)
+                .orderByAsc(SysRegion::getId));
+
+        return regions.stream().map(this::toRegionVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignRegions(UserAssignRegionDTO assignRegionDTO) {
+        Long userId = assignRegionDTO.getUserId();
+
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+        if (!StatusEnum.isEnabled(user.getStatus())) {
+            throw new BusinessException("不能给禁用用户分配区域");
+        }
+
+        checkUserRoleAssignTargetPermission(user);
+
+        Set<Long> uniqueRegionIds = assignRegionDTO.getRegionIds() == null
+                ? Set.of()
+                : new HashSet<>(assignRegionDTO.getRegionIds());
+
+        if (!uniqueRegionIds.isEmpty()) {
+            List<SysRegion> regions = sysRegionMapper.selectBatchIds(uniqueRegionIds);
+
+            if (regions.size() != uniqueRegionIds.size()) {
+                throw new BusinessException("存在无效区域");
+            }
+
+            boolean hasDisabledRegion = regions.stream()
+                    .anyMatch(region -> !StatusEnum.isEnabled(region.getStatus()));
+
+            if (hasDisabledRegion) {
+                throw new BusinessException("不能分配已禁用区域");
+            }
+
+            checkAssignableRegions(regions);
+        }
+
+        sysUserRegionMapper.delete(new LambdaQueryWrapper<SysUserRegion>()
+                .eq(SysUserRegion::getUserId, userId));
+
+        if (!uniqueRegionIds.isEmpty()) {
+            List<SysUserRegion> userRegionList = uniqueRegionIds.stream()
+                    .map(regionId -> {
+                        SysUserRegion userRegion = new SysUserRegion();
+                        userRegion.setUserId(userId);
+                        userRegion.setRegionId(regionId);
+                        return userRegion;
+                    })
+                    .toList();
+
+            sysUserRegionMapper.insertBatch(userRegionList);
+        }
+
+        loginUserCacheService.deleteLoginUser(userId);
+    }
+
     private UserVO toVO(SysUser user) {
         UserVO vo = new UserVO();
         BeanUtils.copyProperties(user, vo);
@@ -379,6 +466,64 @@ public class SysUserServiceImpl implements SysUserService {
 
         if (!currentUserId.equals(user.getCreateBy())) {
             throw new BusinessException("无权给该用户分配角色");
+        }
+    }
+    private RegionVO toRegionVO(SysRegion region) {
+        RegionVO vo = new RegionVO();
+        BeanUtils.copyProperties(region, vo);
+        return vo;
+    }
+
+    private void checkAssignableRegions(List<SysRegion> regions) {
+        if (SecurityUtils.isSuperAdmin() || regions == null || regions.isEmpty()) {
+            return;
+        }
+
+        Long currentUserId = SecurityUtils.getUserId();
+
+        List<SysUserRegion> userRegions = sysUserRegionMapper.selectList(
+                new LambdaQueryWrapper<SysUserRegion>()
+                        .eq(SysUserRegion::getUserId, currentUserId)
+        );
+
+        Set<Long> currentUserRegionIds = userRegions.stream()
+                .map(SysUserRegion::getRegionId)
+                .collect(Collectors.toSet());
+
+        if (!currentUserRegionIds.isEmpty()) {
+            List<SysRegion> allRegions = sysRegionMapper.selectList(new LambdaQueryWrapper<>());
+            Set<Long> regionScopeIds = new HashSet<>(currentUserRegionIds);
+
+            for (Long regionId : currentUserRegionIds) {
+                addChildRegionIds(regionId, allRegions, regionScopeIds);
+            }
+
+            currentUserRegionIds = regionScopeIds;
+        }
+
+        Set<Long> finalCurrentUserRegionIds = currentUserRegionIds;
+
+        boolean hasNoPermissionRegion = regions.stream().anyMatch(region -> {
+            boolean createdByMe = currentUserId.equals(region.getCreateBy());
+            boolean ownedByMe = finalCurrentUserRegionIds.contains(region.getId());
+            return !createdByMe && !ownedByMe;
+        });
+
+        if (hasNoPermissionRegion) {
+            throw new BusinessException("不能分配无权管理的区域");
+        }
+    }
+
+    private void addChildRegionIds(Long parentId,
+                                   List<SysRegion> regions,
+                                   Set<Long> regionIds) {
+        for (SysRegion region : regions) {
+            if (!parentId.equals(region.getParentId())) {
+                continue;
+            }
+
+            regionIds.add(region.getId());
+            addChildRegionIds(region.getId(), regions, regionIds);
         }
     }
 }

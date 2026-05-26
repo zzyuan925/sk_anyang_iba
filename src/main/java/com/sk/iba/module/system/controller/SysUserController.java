@@ -6,6 +6,7 @@ import com.sk.iba.common.page.PageResult;
 import com.sk.iba.common.result.Result;
 import com.sk.iba.module.system.dto.*;
 import com.sk.iba.module.system.service.SysUserService;
+import com.sk.iba.module.system.vo.RegionVO;
 import com.sk.iba.module.system.vo.RoleVO;
 import com.sk.iba.module.system.vo.UserVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -124,6 +125,27 @@ public class SysUserController {
     public Result<Void> resetPassword(@PathVariable @NotNull(message = "用户ID不能为空") Long id,
                                       @RequestBody @Valid UserResetPasswordDTO resetPasswordDTO) {
         sysUserService.resetPassword(id, resetPasswordDTO);
+        return Result.success();
+    }
+    
+    @OperationLog(module = "用户管理", name = "查询用户已绑定区域", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "查询用户已绑定区域", description = "根据用户ID查询该用户拥有的区域列表")
+    @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
+    @GetMapping("/{userId}/regions")
+    @PreAuthorize("hasAuthority('system:user:listRegions')")
+    public Result<List<RegionVO>> listUserRegions(@PathVariable @NotNull(message = "用户ID不能为空") Long userId) {
+        return Result.success(sysUserService.listUserRegions(userId));
+    }
+
+    @OperationLog(module = "用户管理", name = "给用户分配区域", type = OperationType.ASSIGN, recordResult = false)
+    @Operation(summary = "给用户分配区域", description = "重新分配用户区域，会覆盖原有区域")
+    @Parameter(name = "userId", description = "用户ID", required = true, example = "1")
+    @PutMapping("/{userId}/regions")
+    @PreAuthorize("hasAuthority('system:user:assignRegion')")
+    public Result<Void> assignRegions(@PathVariable @NotNull(message = "用户ID不能为空") Long userId,
+                                      @RequestBody @Valid UserAssignRegionDTO assignRegionDTO) {
+        assignRegionDTO.setUserId(userId);
+        sysUserService.assignRegions(assignRegionDTO);
         return Result.success();
     }
 }

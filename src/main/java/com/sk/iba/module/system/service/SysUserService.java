@@ -2,6 +2,7 @@ package com.sk.iba.module.system.service;
 
 import com.sk.iba.common.page.PageResult;
 import com.sk.iba.module.system.dto.*;
+import com.sk.iba.module.system.vo.RegionVO;
 import com.sk.iba.module.system.vo.RoleVO;
 import com.sk.iba.module.system.vo.UserVO;
 
@@ -55,4 +56,13 @@ public interface SysUserService {
      * 管理员重置密码
      */
     void resetPassword(Long id, UserResetPasswordDTO resetPasswordDTO);
+    /**
+     * 查询用户已绑定区域
+     */
+    List<RegionVO> listUserRegions(Long userId);
+
+    /**
+     * 给用户重新分配区域
+     */
+    void assignRegions(UserAssignRegionDTO assignRegionDTO);
 }
