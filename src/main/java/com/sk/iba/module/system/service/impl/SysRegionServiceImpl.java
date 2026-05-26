@@ -5,6 +5,8 @@ import com.sk.iba.common.constant.SystemConstants;
 import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
+import com.sk.iba.module.device.entity.Camera;
+import com.sk.iba.module.device.mapper.CameraMapper;
 import com.sk.iba.module.system.dto.RegionCreateDTO;
 import com.sk.iba.module.system.dto.RegionQueryDTO;
 import com.sk.iba.module.system.dto.RegionUpdateDTO;
@@ -36,6 +38,8 @@ public class SysRegionServiceImpl implements SysRegionService {
     private final SysRegionMapper sysRegionMapper;
 
     private final SysUserRegionMapper sysUserRegionMapper;
+
+    private final CameraMapper cameraMapper;
 
     @Override
     public List<RegionTreeVO> treeRegions(RegionQueryDTO queryDTO) {
@@ -222,8 +226,12 @@ public class SysRegionServiceImpl implements SysRegionService {
             throw new BusinessException("该区域已分配给用户，不能删除");
         }
 
-        // todo 后面接摄像头时，这里再加一层校验：
-        // 如果区域下存在摄像头，不能删除。
+        Long cameraCount = cameraMapper.selectCount(new LambdaQueryWrapper<Camera>()
+                .eq(Camera::getRegionId, id));
+
+        if (cameraCount > 0) {
+            throw new BusinessException("该区域下存在摄像头，不能删除");
+        }
 
         sysRegionMapper.deleteById(id);
     }

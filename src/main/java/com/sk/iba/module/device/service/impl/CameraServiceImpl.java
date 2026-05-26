@@ -199,10 +199,6 @@ public class CameraServiceImpl implements CameraService {
 
         checkCameraDataPermission(camera);
 
-        // 后面接算法、告警后，这里可以加限制：
-        // 1. 摄像头已绑定算法，不能删除
-        // 2. 摄像头存在告警记录，不能删除，或者只允许逻辑删除
-
         cameraMapper.deleteById(id);
     }
 
