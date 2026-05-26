@@ -7,14 +7,20 @@ import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
+import com.sk.iba.module.device.dto.CameraAssignFunctionDTO;
 import com.sk.iba.module.device.dto.CameraCreateDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
+import com.sk.iba.module.device.entity.AlgorithmFunction;
 import com.sk.iba.module.device.entity.Camera;
+import com.sk.iba.module.device.entity.CameraFunction;
+import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
+import com.sk.iba.module.device.mapper.CameraFunctionMapper;
 import com.sk.iba.module.device.mapper.CameraMapper;
 import com.sk.iba.module.device.service.CameraService;
 import com.sk.iba.module.device.vo.CameraOptionVO;
 import com.sk.iba.module.device.vo.CameraVO;
+import com.sk.iba.module.device.vo.FunctionVO;
 import com.sk.iba.module.system.entity.SysRegion;
 import com.sk.iba.module.system.entity.SysUserRegion;
 import com.sk.iba.module.system.mapper.SysRegionMapper;
@@ -45,6 +51,10 @@ public class CameraServiceImpl implements CameraService {
     private final SysRegionMapper sysRegionMapper;
 
     private final SysUserRegionMapper sysUserRegionMapper;
+    
+    private final AlgorithmFunctionMapper algorithmFunctionMapper;
+
+    private final CameraFunctionMapper cameraFunctionMapper;
 
     @Override
     public PageResult<CameraVO> pageCameras(CameraQueryDTO queryDTO) {
@@ -199,6 +209,9 @@ public class CameraServiceImpl implements CameraService {
 
         checkCameraDataPermission(camera);
 
+        cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
+                .eq(CameraFunction::getCameraId, id));
+
         cameraMapper.deleteById(id);
     }
 
@@ -221,6 +234,91 @@ public class CameraServiceImpl implements CameraService {
         return cameras.stream().map(this::toOptionVO).toList();
     }
 
+    @Override
+    public List<FunctionVO> listCameraFunctions(Long cameraId) {
+        Camera camera = cameraMapper.selectById(cameraId);
+        if (camera == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
+        }
+
+        checkCameraDataPermission(camera);
+
+        List<CameraFunction> cameraFunctions = cameraFunctionMapper.selectList(
+                new LambdaQueryWrapper<CameraFunction>()
+                        .eq(CameraFunction::getCameraId, cameraId)
+        );
+
+        List<Long> functionIds = cameraFunctions.stream()
+                .map(CameraFunction::getFunctionId)
+                .toList();
+
+        if (functionIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<AlgorithmFunction> functions = algorithmFunctionMapper.selectList(
+                new LambdaQueryWrapper<AlgorithmFunction>()
+                        .in(AlgorithmFunction::getId, functionIds)
+                        .orderByDesc(AlgorithmFunction::getCreateTime)
+        );
+
+        return functions.stream().map(this::toFunctionVO).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignFunctions(CameraAssignFunctionDTO assignFunctionDTO) {
+        Long cameraId = assignFunctionDTO.getCameraId();
+
+        Camera camera = cameraMapper.selectById(cameraId);
+        if (camera == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
+        }
+
+        checkCameraDataPermission(camera);
+
+        Set<Long> uniqueFunctionIds = assignFunctionDTO.getFunctionIds() == null
+                ? Set.of()
+                : new HashSet<>(assignFunctionDTO.getFunctionIds());
+
+        if (!uniqueFunctionIds.isEmpty()) {
+            List<AlgorithmFunction> functions = algorithmFunctionMapper.selectBatchIds(uniqueFunctionIds);
+
+            if (functions.size() != uniqueFunctionIds.size()) {
+                throw new BusinessException("存在无效功能");
+            }
+
+            boolean hasDisabledFunction = functions.stream()
+                    .anyMatch(function -> !StatusEnum.isEnabled(function.getStatus()));
+
+            if (hasDisabledFunction) {
+                throw new BusinessException("不能分配已禁用功能");
+            }
+        }
+
+        cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
+                .eq(CameraFunction::getCameraId, cameraId));
+
+        if (!uniqueFunctionIds.isEmpty()) {
+            List<CameraFunction> cameraFunctionList = uniqueFunctionIds.stream()
+                    .map(functionId -> {
+                        CameraFunction cameraFunction = new CameraFunction();
+                        cameraFunction.setCameraId(cameraId);
+                        cameraFunction.setFunctionId(functionId);
+                        return cameraFunction;
+                    })
+                    .toList();
+
+            cameraFunctionMapper.insertBatch(cameraFunctionList);
+        }
+    }
+
+    private FunctionVO toFunctionVO(AlgorithmFunction function) {
+        FunctionVO vo = new FunctionVO();
+        BeanUtils.copyProperties(function, vo);
+        return vo;
+    }
+    
     private Set<Long> getQueryRegionIds(Long queryRegionId) {
         if (SecurityUtils.isSuperAdmin()) {
             if (queryRegionId == null) {
