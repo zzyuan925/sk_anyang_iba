@@ -400,8 +400,6 @@ public class SysUserServiceImpl implements SysUserService {
 
             sysUserRegionMapper.insertBatch(userRegionList);
         }
-
-        loginUserCacheService.deleteLoginUser(userId);
     }
 
     private UserVO toVO(SysUser user) {
