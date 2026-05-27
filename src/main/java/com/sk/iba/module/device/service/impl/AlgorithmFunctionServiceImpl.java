@@ -43,7 +43,6 @@ public class AlgorithmFunctionServiceImpl implements AlgorithmFunctionService {
         LambdaQueryWrapper<AlgorithmFunction> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(queryDTO.getFunctionName()), AlgorithmFunction::getFunctionName, queryDTO.getFunctionName())
                 .like(StringUtils.hasText(queryDTO.getFunctionCode()), AlgorithmFunction::getFunctionCode, queryDTO.getFunctionCode())
-                .eq(StringUtils.hasText(queryDTO.getFunctionType()), AlgorithmFunction::getFunctionType, queryDTO.getFunctionType())
                 .eq(queryDTO.getStatus() != null, AlgorithmFunction::getStatus, queryDTO.getStatus())
                 .orderByDesc(AlgorithmFunction::getCreateTime);
 
@@ -87,10 +86,6 @@ public class AlgorithmFunctionServiceImpl implements AlgorithmFunctionService {
         function.setFunctionName(functionName);
         function.setFunctionCode(functionCode);
 
-        if (StringUtils.hasText(function.getFunctionType())) {
-            function.setFunctionType(function.getFunctionType().trim());
-        }
-
         algorithmFunctionMapper.insert(function);
         return function.getId();
     }
@@ -130,9 +125,6 @@ public class AlgorithmFunctionServiceImpl implements AlgorithmFunctionService {
 
         if (StringUtils.hasText(function.getFunctionName())) {
             function.setFunctionName(function.getFunctionName().trim());
-        }
-        if (StringUtils.hasText(function.getFunctionType())) {
-            function.setFunctionType(function.getFunctionType().trim());
         }
 
         algorithmFunctionMapper.updateById(function);

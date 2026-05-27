@@ -21,9 +21,6 @@ public class FunctionQueryDTO extends PageQuery {
     @Schema(description = "功能编码", example = "smoking_detect")
     private String functionCode;
 
-    @Schema(description = "功能类型", example = "1121")
-    private String functionType;
-
     @Schema(description = "状态：0禁用，1启用", example = "1")
     private Integer status;
 }

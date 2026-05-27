@@ -24,9 +24,6 @@ public class CameraFunctionVO {
     @Schema(description = "功能编码", example = "AQM1")
     private String functionCode;
 
-    @Schema(description = "功能类型", example = "1121")
-    private String functionType;
-
     @Schema(description = "是否配置ROI：0未配置，1已配置", example = "0")
     private Integer roiConfigured;
 

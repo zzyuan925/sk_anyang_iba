@@ -28,10 +28,6 @@ public class FunctionUpdateDTO {
     @Pattern(regexp = "^[a-zA-Z0-9_:-]+$", message = "功能编码只能由字母、数字、下划线、冒号、中横线组成")
     private String functionCode;
 
-    @Schema(description = "功能类型", example = "1121")
-    @Size(max = 50, message = "功能类型长度不能超过 50")
-    private String functionType;
-
     @Schema(description = "状态：0禁用，1启用", example = "1")
     private Integer status;
 

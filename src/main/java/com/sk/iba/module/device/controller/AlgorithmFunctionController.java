@@ -36,7 +36,7 @@ public class AlgorithmFunctionController {
     private final AlgorithmFunctionService algorithmFunctionService;
 
     @OperationLog(module = "算法功能管理", name = "分页查询算法功能", type = OperationType.QUERY, recordResult = false)
-    @Operation(summary = "分页查询算法功能", description = "根据功能名称、编码、类型、状态进行分页查询")
+    @Operation(summary = "分页查询算法功能", description = "根据功能名称、编码、状态进行分页查询")
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('device:function:list')")
     public Result<PageResult<FunctionVO>> page(@ParameterObject @Validated FunctionQueryDTO queryDTO) {

@@ -19,8 +19,6 @@ public class AlgorithmFunction extends BaseEntity {
 
     private String functionCode;
 
-    private String functionType;
-
     /**
      * 状态：0禁用，1启用
      */

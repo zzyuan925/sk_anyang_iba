@@ -20,7 +20,4 @@ public class FunctionOptionVO {
 
     @Schema(description = "功能编码", example = "smoking_detect")
     private String functionCode;
-
-    @Schema(description = "功能类型", example = "1121")
-    private String functionType;
 }

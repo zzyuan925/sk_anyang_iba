@@ -411,7 +411,6 @@ public class CameraServiceImpl implements CameraService {
         vo.setFunctionId(function.getId());
         vo.setFunctionName(function.getFunctionName());
         vo.setFunctionCode(function.getFunctionCode());
-        vo.setFunctionType(function.getFunctionType());
 
         Long roiCount = cameraFunctionRoiMapper.selectCount(
                 new LambdaQueryWrapper<CameraFunctionRoi>()
