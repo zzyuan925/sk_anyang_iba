@@ -15,8 +15,10 @@ import com.sk.iba.module.alarm.mapper.AlarmRecordMapper;
 import com.sk.iba.module.alarm.service.AlarmRecordService;
 import com.sk.iba.module.alarm.vo.AlarmRecordVO;
 import com.sk.iba.module.system.entity.SysRegion;
+import com.sk.iba.module.system.entity.SysUser;
 import com.sk.iba.module.system.entity.SysUserRegion;
 import com.sk.iba.module.system.mapper.SysRegionMapper;
+import com.sk.iba.module.system.mapper.SysUserMapper;
 import com.sk.iba.module.system.mapper.SysUserRegionMapper;
 import com.sk.iba.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
     private final SysRegionMapper sysRegionMapper;
 
     private final SysUserRegionMapper sysUserRegionMapper;
+
+    private final SysUserMapper sysUserMapper;
 
     @Override
     public PageResult<AlarmRecordVO> pageAlarmRecords(AlarmRecordQueryDTO queryDTO) {
@@ -71,7 +75,10 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
         wrapper.orderByDesc(AlarmRecord::getAlarmTime);
 
         Page<AlarmRecord> alarmPage = alarmRecordMapper.selectPage(page, wrapper);
-        IPage<AlarmRecordVO> voPage = alarmPage.convert(this::toVO);
+
+        Map<Long, SysUser> userMap = buildFalseAlarmUserMap(alarmPage.getRecords());
+
+        IPage<AlarmRecordVO> voPage = alarmPage.convert(alarmRecord -> toVO(alarmRecord, userMap));
         return PageResult.of(voPage);
     }
 
@@ -79,7 +86,9 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
     public AlarmRecordVO getAlarmRecordById(Long id) {
         AlarmRecord alarmRecord = getAlarmRecord(id);
         checkAlarmDataPermission(alarmRecord);
-        return toVO(alarmRecord);
+        
+        Map<Long, SysUser> userMap = buildFalseAlarmUserMap(List.of(alarmRecord));
+        return toVO(alarmRecord, userMap);
     }
 
     @Override
@@ -234,9 +243,37 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
         }
     }
 
-    private AlarmRecordVO toVO(AlarmRecord alarmRecord) {
+    private AlarmRecordVO toVO(AlarmRecord alarmRecord, Map<Long, SysUser> userMap) {
         AlarmRecordVO vo = new AlarmRecordVO();
         BeanUtils.copyProperties(alarmRecord, vo);
+
+        if (alarmRecord.getFalseAlarmBy() != null) {
+            SysUser user = userMap.get(alarmRecord.getFalseAlarmBy());
+            if (user != null) {
+                if (StringUtils.hasText(user.getRealName())) {
+                    vo.setFalseAlarmByName(user.getRealName());
+                } else {
+                    vo.setFalseAlarmByName(user.getUsername());
+                }
+            }
+        }
+
         return vo;
+    }
+
+    private Map<Long, SysUser> buildFalseAlarmUserMap(List<AlarmRecord> alarmRecords) {
+        Set<Long> userIds = alarmRecords.stream()
+                .map(AlarmRecord::getFalseAlarmBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<SysUser> users = sysUserMapper.selectBatchIds(userIds);
+
+        return users.stream()
+                .collect(Collectors.toMap(SysUser::getId, user -> user));
     }
 }

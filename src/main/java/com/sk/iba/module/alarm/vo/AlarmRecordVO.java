@@ -59,6 +59,9 @@ public class AlarmRecordVO {
     @Schema(description = "误报状态操作人ID", example = "1")
     private Long falseAlarmBy;
 
+    @Schema(description = "误报状态操作人姓名", example = "张三")
+    private String falseAlarmByName;
+
     @Schema(description = "误报状态操作时间")
     private LocalDateTime falseAlarmTime;
 
