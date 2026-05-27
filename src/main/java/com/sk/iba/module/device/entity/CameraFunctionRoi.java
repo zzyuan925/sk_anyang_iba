@@ -20,6 +20,16 @@ public class CameraFunctionRoi {
     private Long cameraFunctionId;
 
     /**
+     * ROI昵称
+     */
+    private String roiName;
+
+    /**
+     * ROI类型ID
+     */
+    private Long roiTypeId;
+
+    /**
      * ROI多边形坐标JSON
      */
     private String roiData;

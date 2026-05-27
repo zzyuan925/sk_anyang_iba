@@ -3,7 +3,8 @@ package com.sk.iba.module.device.controller;
 import com.sk.iba.common.log.OperationLog;
 import com.sk.iba.common.log.OperationType;
 import com.sk.iba.common.result.Result;
-import com.sk.iba.module.device.dto.CameraFunctionRoiSaveDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiUpdateDTO;
 import com.sk.iba.module.device.dto.CameraFunctionTimeSaveDTO;
 import com.sk.iba.module.device.service.CameraFunctionConfigService;
 import com.sk.iba.module.device.vo.CameraFunctionRoiVO;
@@ -30,33 +31,45 @@ public class CameraFunctionConfigController {
 
     private final CameraFunctionConfigService cameraFunctionConfigService;
 
-    @OperationLog(module = "摄像头功能配置", name = "查询ROI配置", type = OperationType.QUERY, recordResult = false)
-    @Operation(summary = "查询ROI配置")
+    @OperationLog(module = "摄像头功能配置", name = "查询ROI列表", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "查询ROI列表", description = "查询某个摄像头功能下的多个ROI配置；空列表表示全屏")
     @Parameter(name = "cameraFunctionId", description = "摄像头功能关联ID", required = true, example = "1")
-    @GetMapping("/{cameraFunctionId}/roi")
+    @GetMapping("/{cameraFunctionId}/rois")
     @PreAuthorize("hasAuthority('device:camera:configFunction')")
-    public Result<CameraFunctionRoiVO> getRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId) {
-        return Result.success(cameraFunctionConfigService.getRoi(cameraFunctionId));
+    public Result<List<CameraFunctionRoiVO>> listRois(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId) {
+        return Result.success(cameraFunctionConfigService.listRois(cameraFunctionId));
     }
 
-    @OperationLog(module = "摄像头功能配置", name = "保存ROI配置", type = OperationType.UPDATE, recordResult = false)
-    @Operation(summary = "保存ROI配置", description = "保存ROI配置，覆盖原有ROI")
+    @OperationLog(module = "摄像头功能配置", name = "新增ROI", type = OperationType.CREATE, recordResult = false)
+    @Operation(summary = "新增ROI", description = "每画一个ROI区域调用一次该接口")
     @Parameter(name = "cameraFunctionId", description = "摄像头功能关联ID", required = true, example = "1")
-    @PutMapping("/{cameraFunctionId}/roi")
+    @PostMapping("/{cameraFunctionId}/rois")
     @PreAuthorize("hasAuthority('device:camera:configFunction')")
-    public Result<Void> saveRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId,
-                                @RequestBody @Valid CameraFunctionRoiSaveDTO saveDTO) {
-        cameraFunctionConfigService.saveRoi(cameraFunctionId, saveDTO);
+    public Result<Long> createRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId,
+                                  @RequestBody @Valid CameraFunctionRoiCreateDTO createDTO) {
+        return Result.success(cameraFunctionConfigService.createRoi(cameraFunctionId, createDTO));
+    }
+
+    @OperationLog(module = "摄像头功能配置", name = "修改ROI", type = OperationType.UPDATE, recordResult = false)
+    @Operation(summary = "修改ROI", description = "修改某一个ROI区域")
+    @Parameter(name = "cameraFunctionId", description = "摄像头功能关联ID", required = true, example = "1")
+    @PutMapping("/{cameraFunctionId}/rois/{roiId}")
+    @PreAuthorize("hasAuthority('device:camera:configFunction')")
+    public Result<Void> updateRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId,
+                                  @PathVariable @NotNull(message = "ROI ID不能为空") Long roiId,
+                                  @RequestBody @Valid CameraFunctionRoiUpdateDTO updateDTO) {
+        cameraFunctionConfigService.updateRoi(cameraFunctionId, roiId, updateDTO);
         return Result.success();
     }
 
-    @OperationLog(module = "摄像头功能配置", name = "清空ROI配置", type = OperationType.DELETE, recordResult = false)
-    @Operation(summary = "清空ROI配置", description = "清空ROI后默认全屏")
+    @OperationLog(module = "摄像头功能配置", name = "删除ROI", type = OperationType.DELETE, recordResult = false)
+    @Operation(summary = "删除ROI", description = "删除某一个ROI区域")
     @Parameter(name = "cameraFunctionId", description = "摄像头功能关联ID", required = true, example = "1")
-    @DeleteMapping("/{cameraFunctionId}/roi")
+    @DeleteMapping("/{cameraFunctionId}/rois/{roiId}")
     @PreAuthorize("hasAuthority('device:camera:configFunction')")
-    public Result<Void> clearRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId) {
-        cameraFunctionConfigService.clearRoi(cameraFunctionId);
+    public Result<Void> deleteRoi(@PathVariable @NotNull(message = "摄像头功能关联ID不能为空") Long cameraFunctionId,
+                                  @PathVariable @NotNull(message = "ROI ID不能为空") Long roiId) {
+        cameraFunctionConfigService.deleteRoi(cameraFunctionId, roiId);
         return Result.success();
     }
 

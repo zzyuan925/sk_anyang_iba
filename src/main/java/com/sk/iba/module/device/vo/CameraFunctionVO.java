@@ -30,6 +30,9 @@ public class CameraFunctionVO {
     @Schema(description = "是否配置ROI：0未配置，1已配置", example = "0")
     private Integer roiConfigured;
 
+    @Schema(description = "ROI数量", example = "2")
+    private Integer roiCount;
+    
     @Schema(description = "ROI显示文本：全屏 / 已配置", example = "全屏")
     private String roiText;
 

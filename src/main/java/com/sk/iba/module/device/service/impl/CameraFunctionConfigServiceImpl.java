@@ -2,16 +2,20 @@ package com.sk.iba.module.device.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.sk.iba.common.enums.ResultCode;
+import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
-import com.sk.iba.module.device.dto.CameraFunctionRoiSaveDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiUpdateDTO;
 import com.sk.iba.module.device.dto.CameraFunctionTimeSaveDTO;
 import com.sk.iba.module.device.dto.TimePeriodDTO;
 import com.sk.iba.module.device.entity.CameraFunction;
 import com.sk.iba.module.device.entity.CameraFunctionRoi;
 import com.sk.iba.module.device.entity.CameraFunctionTime;
+import com.sk.iba.module.device.entity.RoiType;
 import com.sk.iba.module.device.mapper.CameraFunctionMapper;
 import com.sk.iba.module.device.mapper.CameraFunctionRoiMapper;
 import com.sk.iba.module.device.mapper.CameraFunctionTimeMapper;
+import com.sk.iba.module.device.mapper.RoiTypeMapper;
 import com.sk.iba.module.device.service.CameraFunctionConfigService;
 import com.sk.iba.module.device.service.CameraService;
 import com.sk.iba.module.device.vo.CameraFunctionRoiVO;
@@ -24,6 +28,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @author zzy
@@ -38,60 +45,99 @@ public class CameraFunctionConfigServiceImpl implements CameraFunctionConfigServ
 
     private final CameraFunctionTimeMapper cameraFunctionTimeMapper;
 
+    private final RoiTypeMapper roiTypeMapper;
+
     private final CameraService cameraService;
 
     @Override
-    public CameraFunctionRoiVO getRoi(Long cameraFunctionId) {
+    public List<CameraFunctionRoiVO> listRois(Long cameraFunctionId) {
         checkCameraFunctionPermission(cameraFunctionId);
 
-        CameraFunctionRoi roi = cameraFunctionRoiMapper.selectOne(
+        List<CameraFunctionRoi> rois = cameraFunctionRoiMapper.selectList(
                 new LambdaQueryWrapper<CameraFunctionRoi>()
                         .eq(CameraFunctionRoi::getCameraFunctionId, cameraFunctionId)
-                        .last("LIMIT 1")
+                        .orderByAsc(CameraFunctionRoi::getId)
         );
 
-        CameraFunctionRoiVO vo = new CameraFunctionRoiVO();
-        vo.setCameraFunctionId(cameraFunctionId);
-
-        if (roi == null) {
-            vo.setRoiConfigured(0);
-            vo.setRoiText("全屏");
-            return vo;
+        if (rois.isEmpty()) {
+            return List.of();
         }
 
-        vo.setRoiData(roi.getRoiData());
-        vo.setRoiConfigured(1);
-        vo.setRoiText("已配置");
-        return vo;
+        List<Long> roiTypeIds = rois.stream()
+                .map(CameraFunctionRoi::getRoiTypeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Long, RoiType> roiTypeMap = roiTypeIds.isEmpty()
+                ? Map.of()
+                : roiTypeMapper.selectBatchIds(roiTypeIds).stream()
+                .collect(Collectors.toMap(RoiType::getId, item -> item));
+
+        return rois.stream()
+                .map(roi -> toRoiVO(roi, roiTypeMap.get(roi.getRoiTypeId())))
+                .toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void saveRoi(Long cameraFunctionId, CameraFunctionRoiSaveDTO saveDTO) {
+    public Long createRoi(Long cameraFunctionId, CameraFunctionRoiCreateDTO createDTO) {
         checkCameraFunctionPermission(cameraFunctionId);
 
-        String roiData = saveDTO.getRoiData().trim();
+        checkRoiType(createDTO.getRoiTypeId());
+
+        String roiData = createDTO.getRoiData().trim();
         if (!StringUtils.hasText(roiData)) {
             throw new BusinessException("ROI坐标不能为空");
         }
 
-        cameraFunctionRoiMapper.delete(new LambdaQueryWrapper<CameraFunctionRoi>()
-                .eq(CameraFunctionRoi::getCameraFunctionId, cameraFunctionId));
-
         CameraFunctionRoi roi = new CameraFunctionRoi();
         roi.setCameraFunctionId(cameraFunctionId);
+        roi.setRoiName(StringUtils.hasText(createDTO.getRoiName()) ? createDTO.getRoiName().trim() : null);
+        roi.setRoiTypeId(createDTO.getRoiTypeId());
         roi.setRoiData(roiData);
 
         cameraFunctionRoiMapper.insert(roi);
+        return roi.getId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void clearRoi(Long cameraFunctionId) {
+    public void updateRoi(Long cameraFunctionId, Long roiId, CameraFunctionRoiUpdateDTO updateDTO) {
         checkCameraFunctionPermission(cameraFunctionId);
 
-        cameraFunctionRoiMapper.delete(new LambdaQueryWrapper<CameraFunctionRoi>()
-                .eq(CameraFunctionRoi::getCameraFunctionId, cameraFunctionId));
+        CameraFunctionRoi oldRoi = cameraFunctionRoiMapper.selectById(roiId);
+        if (oldRoi == null || !cameraFunctionId.equals(oldRoi.getCameraFunctionId())) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "ROI不存在");
+        }
+
+        checkRoiType(updateDTO.getRoiTypeId());
+
+        String roiData = updateDTO.getRoiData().trim();
+        if (!StringUtils.hasText(roiData)) {
+            throw new BusinessException("ROI坐标不能为空");
+        }
+
+        CameraFunctionRoi roi = new CameraFunctionRoi();
+        roi.setId(roiId);
+        roi.setRoiName(StringUtils.hasText(updateDTO.getRoiName()) ? updateDTO.getRoiName().trim() : null);
+        roi.setRoiTypeId(updateDTO.getRoiTypeId());
+        roi.setRoiData(roiData);
+
+        cameraFunctionRoiMapper.updateById(roi);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteRoi(Long cameraFunctionId, Long roiId) {
+        checkCameraFunctionPermission(cameraFunctionId);
+
+        CameraFunctionRoi roi = cameraFunctionRoiMapper.selectById(roiId);
+        if (roi == null || !cameraFunctionId.equals(roi.getCameraFunctionId())) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "ROI不存在");
+        }
+
+        cameraFunctionRoiMapper.deleteById(roiId);
     }
 
     @Override
@@ -142,10 +188,19 @@ public class CameraFunctionConfigServiceImpl implements CameraFunctionConfigServ
             throw new BusinessException(ResultCode.NOT_FOUND, "摄像头功能不存在");
         }
 
-        // 复用摄像头详情权限校验：无权访问该摄像头时这里会抛异常
         cameraService.getCameraById(cameraFunction.getCameraId());
-
         return cameraFunction;
+    }
+
+    private void checkRoiType(Long roiTypeId) {
+        RoiType roiType = roiTypeMapper.selectById(roiTypeId);
+        if (roiType == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "ROI类型不存在");
+        }
+
+        if (!StatusEnum.isEnabled(roiType.getStatus())) {
+            throw new BusinessException("不能选择已禁用ROI类型");
+        }
     }
 
     private CameraFunctionTime toTime(Long cameraFunctionId, TimePeriodDTO dto) {
@@ -161,6 +216,18 @@ public class CameraFunctionConfigServiceImpl implements CameraFunctionConfigServ
         time.setStartTime(startTime);
         time.setEndTime(endTime);
         return time;
+    }
+
+    private CameraFunctionRoiVO toRoiVO(CameraFunctionRoi roi, RoiType roiType) {
+        CameraFunctionRoiVO vo = new CameraFunctionRoiVO();
+        BeanUtils.copyProperties(roi, vo);
+
+        if (roiType != null) {
+            vo.setRoiTypeName(roiType.getTypeName());
+            vo.setRoiTypeCode(roiType.getTypeCode());
+        }
+
+        return vo;
     }
 
     private CameraFunctionTimeVO toTimeVO(CameraFunctionTime time) {

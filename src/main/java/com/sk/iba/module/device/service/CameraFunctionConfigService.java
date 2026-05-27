@@ -1,6 +1,7 @@
 package com.sk.iba.module.device.service;
 
-import com.sk.iba.module.device.dto.CameraFunctionRoiSaveDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionRoiUpdateDTO;
 import com.sk.iba.module.device.dto.CameraFunctionTimeSaveDTO;
 import com.sk.iba.module.device.vo.CameraFunctionRoiVO;
 import com.sk.iba.module.device.vo.CameraFunctionTimeVO;
@@ -13,19 +14,24 @@ import java.util.List;
 public interface CameraFunctionConfigService {
 
     /**
-     * 查询ROI配置
+     * 查询ROI列表
      */
-    CameraFunctionRoiVO getRoi(Long cameraFunctionId);
+    List<CameraFunctionRoiVO> listRois(Long cameraFunctionId);
 
     /**
-     * 保存ROI配置
+     * 新增ROI
      */
-    void saveRoi(Long cameraFunctionId, CameraFunctionRoiSaveDTO saveDTO);
+    Long createRoi(Long cameraFunctionId, CameraFunctionRoiCreateDTO createDTO);
 
     /**
-     * 清空ROI配置，恢复全屏
+     * 修改ROI
      */
-    void clearRoi(Long cameraFunctionId);
+    void updateRoi(Long cameraFunctionId, Long roiId, CameraFunctionRoiUpdateDTO updateDTO);
+
+    /**
+     * 删除ROI
+     */
+    void deleteRoi(Long cameraFunctionId, Long roiId);
 
     /**
      * 查询运行时间段

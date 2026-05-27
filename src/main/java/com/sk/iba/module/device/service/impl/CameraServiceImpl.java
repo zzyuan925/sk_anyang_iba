@@ -418,9 +418,11 @@ public class CameraServiceImpl implements CameraService {
                         .eq(CameraFunctionRoi::getCameraFunctionId, cameraFunction.getId())
         );
 
+        vo.setRoiCount(roiCount.intValue());
+
         if (roiCount > 0) {
             vo.setRoiConfigured(1);
-            vo.setRoiText("已配置");
+            vo.setRoiText("已配置 " + roiCount + " 个");
         } else {
             vo.setRoiConfigured(0);
             vo.setRoiText("全屏");
