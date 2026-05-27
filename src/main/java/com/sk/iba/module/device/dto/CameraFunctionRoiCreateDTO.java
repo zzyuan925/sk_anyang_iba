@@ -16,6 +16,7 @@ import lombok.Data;
 public class CameraFunctionRoiCreateDTO {
 
     @Schema(description = "ROI昵称", example = "门口区域")
+    @NotBlank(message = "ROI昵称不能为空")
     @Size(max = 100, message = "ROI昵称长度不能超过 100")
     private String roiName;
 
