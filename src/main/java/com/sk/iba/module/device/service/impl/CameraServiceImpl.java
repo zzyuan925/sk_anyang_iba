@@ -11,16 +11,12 @@ import com.sk.iba.module.device.dto.CameraAssignFunctionDTO;
 import com.sk.iba.module.device.dto.CameraCreateDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
-import com.sk.iba.module.device.entity.AlgorithmFunction;
-import com.sk.iba.module.device.entity.Camera;
-import com.sk.iba.module.device.entity.CameraFunction;
-import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
-import com.sk.iba.module.device.mapper.CameraFunctionMapper;
-import com.sk.iba.module.device.mapper.CameraMapper;
+import com.sk.iba.module.device.entity.*;
+import com.sk.iba.module.device.mapper.*;
 import com.sk.iba.module.device.service.CameraService;
+import com.sk.iba.module.device.vo.CameraFunctionVO;
 import com.sk.iba.module.device.vo.CameraOptionVO;
 import com.sk.iba.module.device.vo.CameraVO;
-import com.sk.iba.module.device.vo.FunctionVO;
 import com.sk.iba.module.system.entity.SysRegion;
 import com.sk.iba.module.system.entity.SysUserRegion;
 import com.sk.iba.module.system.mapper.SysRegionMapper;
@@ -55,6 +51,10 @@ public class CameraServiceImpl implements CameraService {
     private final AlgorithmFunctionMapper algorithmFunctionMapper;
 
     private final CameraFunctionMapper cameraFunctionMapper;
+
+    private final CameraFunctionRoiMapper cameraFunctionRoiMapper;
+
+    private final CameraFunctionTimeMapper cameraFunctionTimeMapper;
 
     @Override
     public PageResult<CameraVO> pageCameras(CameraQueryDTO queryDTO) {
@@ -209,8 +209,25 @@ public class CameraServiceImpl implements CameraService {
 
         checkCameraDataPermission(camera);
 
-        cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
-                .eq(CameraFunction::getCameraId, id));
+        List<CameraFunction> cameraFunctions = cameraFunctionMapper.selectList(
+                new LambdaQueryWrapper<CameraFunction>()
+                        .eq(CameraFunction::getCameraId, id)
+        );
+
+        List<Long> cameraFunctionIds = cameraFunctions.stream()
+                .map(CameraFunction::getId)
+                .toList();
+
+        if (!cameraFunctionIds.isEmpty()) {
+            cameraFunctionRoiMapper.delete(new LambdaQueryWrapper<CameraFunctionRoi>()
+                    .in(CameraFunctionRoi::getCameraFunctionId, cameraFunctionIds));
+
+            cameraFunctionTimeMapper.delete(new LambdaQueryWrapper<CameraFunctionTime>()
+                    .in(CameraFunctionTime::getCameraFunctionId, cameraFunctionIds));
+
+            cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
+                    .eq(CameraFunction::getCameraId, id));
+        }
 
         cameraMapper.deleteById(id);
     }
@@ -235,7 +252,7 @@ public class CameraServiceImpl implements CameraService {
     }
 
     @Override
-    public List<FunctionVO> listCameraFunctions(Long cameraId) {
+    public List<CameraFunctionVO> listCameraFunctions(Long cameraId) {
         Camera camera = cameraMapper.selectById(cameraId);
         if (camera == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
@@ -246,23 +263,29 @@ public class CameraServiceImpl implements CameraService {
         List<CameraFunction> cameraFunctions = cameraFunctionMapper.selectList(
                 new LambdaQueryWrapper<CameraFunction>()
                         .eq(CameraFunction::getCameraId, cameraId)
+                        .orderByAsc(CameraFunction::getId)
         );
+
+        if (cameraFunctions.isEmpty()) {
+            return List.of();
+        }
 
         List<Long> functionIds = cameraFunctions.stream()
                 .map(CameraFunction::getFunctionId)
                 .toList();
 
-        if (functionIds.isEmpty()) {
-            return List.of();
-        }
-
         List<AlgorithmFunction> functions = algorithmFunctionMapper.selectList(
                 new LambdaQueryWrapper<AlgorithmFunction>()
                         .in(AlgorithmFunction::getId, functionIds)
-                        .orderByDesc(AlgorithmFunction::getCreateTime)
         );
 
-        return functions.stream().map(this::toFunctionVO).toList();
+        Map<Long, AlgorithmFunction> functionMap = functions.stream()
+                .collect(Collectors.toMap(AlgorithmFunction::getId, function -> function));
+
+        return cameraFunctions.stream()
+                .map(cameraFunction -> toCameraFunctionVO(cameraFunction, functionMap.get(cameraFunction.getFunctionId())))
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override
@@ -277,14 +300,14 @@ public class CameraServiceImpl implements CameraService {
 
         checkCameraDataPermission(camera);
 
-        Set<Long> uniqueFunctionIds = assignFunctionDTO.getFunctionIds() == null
+        Set<Long> newFunctionIds = assignFunctionDTO.getFunctionIds() == null
                 ? Set.of()
                 : new HashSet<>(assignFunctionDTO.getFunctionIds());
 
-        if (!uniqueFunctionIds.isEmpty()) {
-            List<AlgorithmFunction> functions = algorithmFunctionMapper.selectBatchIds(uniqueFunctionIds);
+        if (!newFunctionIds.isEmpty()) {
+            List<AlgorithmFunction> functions = algorithmFunctionMapper.selectBatchIds(newFunctionIds);
 
-            if (functions.size() != uniqueFunctionIds.size()) {
+            if (functions.size() != newFunctionIds.size()) {
                 throw new BusinessException("存在无效功能");
             }
 
@@ -296,11 +319,41 @@ public class CameraServiceImpl implements CameraService {
             }
         }
 
-        cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
-                .eq(CameraFunction::getCameraId, cameraId));
+        List<CameraFunction> oldCameraFunctions = cameraFunctionMapper.selectList(
+                new LambdaQueryWrapper<CameraFunction>()
+                        .eq(CameraFunction::getCameraId, cameraId)
+        );
 
-        if (!uniqueFunctionIds.isEmpty()) {
-            List<CameraFunction> cameraFunctionList = uniqueFunctionIds.stream()
+        Set<Long> oldFunctionIds = oldCameraFunctions.stream()
+                .map(CameraFunction::getFunctionId)
+                .collect(Collectors.toSet());
+
+        Set<Long> addFunctionIds = new HashSet<>(newFunctionIds);
+        addFunctionIds.removeAll(oldFunctionIds);
+
+        Set<Long> removeFunctionIds = new HashSet<>(oldFunctionIds);
+        removeFunctionIds.removeAll(newFunctionIds);
+
+        if (!removeFunctionIds.isEmpty()) {
+            List<Long> removeCameraFunctionIds = oldCameraFunctions.stream()
+                    .filter(item -> removeFunctionIds.contains(item.getFunctionId()))
+                    .map(CameraFunction::getId)
+                    .toList();
+
+            if (!removeCameraFunctionIds.isEmpty()) {
+                cameraFunctionRoiMapper.delete(new LambdaQueryWrapper<CameraFunctionRoi>()
+                        .in(CameraFunctionRoi::getCameraFunctionId, removeCameraFunctionIds));
+
+                cameraFunctionTimeMapper.delete(new LambdaQueryWrapper<CameraFunctionTime>()
+                        .in(CameraFunctionTime::getCameraFunctionId, removeCameraFunctionIds));
+
+                cameraFunctionMapper.delete(new LambdaQueryWrapper<CameraFunction>()
+                        .in(CameraFunction::getId, removeCameraFunctionIds));
+            }
+        }
+
+        if (!addFunctionIds.isEmpty()) {
+            List<CameraFunction> cameraFunctionList = addFunctionIds.stream()
                     .map(functionId -> {
                         CameraFunction cameraFunction = new CameraFunction();
                         cameraFunction.setCameraId(cameraId);
@@ -313,9 +366,44 @@ public class CameraServiceImpl implements CameraService {
         }
     }
 
-    private FunctionVO toFunctionVO(AlgorithmFunction function) {
-        FunctionVO vo = new FunctionVO();
-        BeanUtils.copyProperties(function, vo);
+    private CameraFunctionVO toCameraFunctionVO(CameraFunction cameraFunction, AlgorithmFunction function) {
+        if (function == null) {
+            return null;
+        }
+
+        CameraFunctionVO vo = new CameraFunctionVO();
+        vo.setCameraFunctionId(cameraFunction.getId());
+        vo.setFunctionId(function.getId());
+        vo.setFunctionName(function.getFunctionName());
+        vo.setFunctionCode(function.getFunctionCode());
+        vo.setFunctionType(function.getFunctionType());
+
+        Long roiCount = cameraFunctionRoiMapper.selectCount(
+                new LambdaQueryWrapper<CameraFunctionRoi>()
+                        .eq(CameraFunctionRoi::getCameraFunctionId, cameraFunction.getId())
+        );
+
+        if (roiCount > 0) {
+            vo.setRoiConfigured(1);
+            vo.setRoiText("已配置");
+        } else {
+            vo.setRoiConfigured(0);
+            vo.setRoiText("全屏");
+        }
+
+        Long timeCount = cameraFunctionTimeMapper.selectCount(
+                new LambdaQueryWrapper<CameraFunctionTime>()
+                        .eq(CameraFunctionTime::getCameraFunctionId, cameraFunction.getId())
+        );
+
+        if (timeCount > 0) {
+            vo.setTimeConfigured(1);
+            vo.setTimeText("已配置");
+        } else {
+            vo.setTimeConfigured(0);
+            vo.setTimeText("全天");
+        }
+
         return vo;
     }
     

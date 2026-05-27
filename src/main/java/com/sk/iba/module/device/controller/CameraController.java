@@ -9,9 +9,9 @@ import com.sk.iba.module.device.dto.CameraCreateDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
 import com.sk.iba.module.device.service.CameraService;
+import com.sk.iba.module.device.vo.CameraFunctionVO;
 import com.sk.iba.module.device.vo.CameraOptionVO;
 import com.sk.iba.module.device.vo.CameraVO;
-import com.sk.iba.module.device.vo.FunctionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -94,7 +94,7 @@ public class CameraController {
     @Parameter(name = "cameraId", description = "摄像头ID", required = true, example = "1")
     @GetMapping("/{cameraId}/functions")
     @PreAuthorize("hasAuthority('device:camera:listFunctions')")
-    public Result<List<FunctionVO>> listCameraFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId) {
+    public Result<List<CameraFunctionVO>> listCameraFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId) {
         return Result.success(cameraService.listCameraFunctions(cameraId));
     }
 

@@ -5,7 +5,6 @@ import com.sk.iba.module.device.dto.FunctionCreateDTO;
 import com.sk.iba.module.device.dto.FunctionQueryDTO;
 import com.sk.iba.module.device.dto.FunctionUpdateDTO;
 import com.sk.iba.module.device.vo.FunctionOptionVO;
-import com.sk.iba.module.device.vo.FunctionVO;
 
 import java.util.List;
 

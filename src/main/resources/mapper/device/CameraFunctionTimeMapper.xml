@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.sk.iba.module.device.mapper.CameraFunctionTimeMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO biz_camera_function_time
+        (
+        camera_function_id,
+        start_time,
+        end_time
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.cameraFunctionId},
+            #{item.startTime},
+            #{item.endTime}
+            )
+        </foreach>
+    </insert>
+
+</mapper>
