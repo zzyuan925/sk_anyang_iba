@@ -1,9 +1,8 @@
-package com.sk.iba.module.monitor.impl;
+package com.sk.iba.module.monitor.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.sk.iba.common.constant.LiveStreamConstants;
-import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.module.device.service.CameraService;
@@ -157,7 +156,7 @@ public class MonitorLiveServiceImpl implements MonitorLiveService {
         );
 
         if (mediaServer == null) {
-            throw new BusinessException(ResultCode.NOT_FOUND, "未配置启用的流媒体服务器");
+            throw new BusinessException("未配置启用的流媒体服务器");
         }
 
         return mediaServer;
@@ -166,7 +165,7 @@ public class MonitorLiveServiceImpl implements MonitorLiveService {
     private MediaServer getMediaServer(Long mediaServerId) {
         MediaServer mediaServer = mediaServerMapper.selectById(mediaServerId);
         if (mediaServer == null) {
-            throw new BusinessException(ResultCode.NOT_FOUND, "流媒体服务器不存在");
+            throw new BusinessException("流媒体服务器不存在");
         }
 
         if (!StatusEnum.isEnabled(mediaServer.getStatus())) {
