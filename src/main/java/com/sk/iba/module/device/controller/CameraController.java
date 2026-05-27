@@ -4,12 +4,12 @@ import com.sk.iba.common.log.OperationLog;
 import com.sk.iba.common.log.OperationType;
 import com.sk.iba.common.page.PageResult;
 import com.sk.iba.common.result.Result;
-import com.sk.iba.module.device.dto.CameraAssignFunctionDTO;
 import com.sk.iba.module.device.dto.CameraCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionBatchDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
 import com.sk.iba.module.device.service.CameraService;
-import com.sk.iba.module.device.vo.CameraFunctionVO;
+import com.sk.iba.module.device.vo.CameraFunctionConfigVO;
 import com.sk.iba.module.device.vo.CameraOptionVO;
 import com.sk.iba.module.device.vo.CameraVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,24 +89,32 @@ public class CameraController {
         return Result.success(cameraService.listEnabledCameraOptions());
     }
 
-    @OperationLog(module = "摄像头管理", name = "查询摄像头已绑定功能", type = OperationType.QUERY, recordResult = false)
-    @Operation(summary = "查询摄像头已绑定功能", description = "根据摄像头ID查询该摄像头已绑定的算法功能列表")
+    @OperationLog(module = "摄像头管理", name = "查询摄像头功能配置", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "查询摄像头功能配置", description = "返回已选择和未选择的功能列表")
     @Parameter(name = "cameraId", description = "摄像头ID", required = true, example = "1")
     @GetMapping("/{cameraId}/functions")
     @PreAuthorize("hasAuthority('device:camera:listFunctions')")
-    public Result<List<CameraFunctionVO>> listCameraFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId) {
-        return Result.success(cameraService.listCameraFunctions(cameraId));
+    public Result<CameraFunctionConfigVO> getFunctionConfig(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId) {
+        return Result.success(cameraService.getFunctionConfig(cameraId));
     }
 
-    @OperationLog(module = "摄像头管理", name = "给摄像头分配功能", type = OperationType.ASSIGN, recordResult = false)
-    @Operation(summary = "给摄像头分配功能", description = "重新分配摄像头功能，会覆盖原有功能")
+    @OperationLog(module = "摄像头管理", name = "添加摄像头功能", type = OperationType.ASSIGN, recordResult = false)
+    @Operation(summary = "添加摄像头功能", description = "把功能添加到摄像头，添加后返回最新左右列表")
     @Parameter(name = "cameraId", description = "摄像头ID", required = true, example = "1")
-    @PutMapping("/{cameraId}/functions")
+    @PutMapping("/{cameraId}/functions/add")
     @PreAuthorize("hasAuthority('device:camera:assignFunction')")
-    public Result<Void> assignFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId,
-                                        @RequestBody @Valid CameraAssignFunctionDTO assignFunctionDTO) {
-        assignFunctionDTO.setCameraId(cameraId);
-        cameraService.assignFunctions(assignFunctionDTO);
-        return Result.success();
+    public Result<CameraFunctionConfigVO> addFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId,
+                                                       @RequestBody CameraFunctionBatchDTO batchDTO) {
+        return Result.success(cameraService.addFunctions(cameraId, batchDTO));
+    }
+
+    @OperationLog(module = "摄像头管理", name = "移除摄像头功能", type = OperationType.ASSIGN, recordResult = false)
+    @Operation(summary = "移除摄像头功能", description = "把功能从摄像头移除，移除后返回最新左右列表")
+    @Parameter(name = "cameraId", description = "摄像头ID", required = true, example = "1")
+    @PutMapping("/{cameraId}/functions/remove")
+    @PreAuthorize("hasAuthority('device:camera:assignFunction')")
+    public Result<CameraFunctionConfigVO> removeFunctions(@PathVariable @NotNull(message = "摄像头ID不能为空") Long cameraId,
+                                                          @RequestBody CameraFunctionBatchDTO batchDTO) {
+        return Result.success(cameraService.removeFunctions(cameraId, batchDTO));
     }
 }

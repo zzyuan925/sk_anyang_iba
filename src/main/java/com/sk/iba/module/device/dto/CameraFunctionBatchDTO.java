@@ -6,16 +6,13 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 摄像头分配功能参数
+ * 摄像头功能批量操作参数
  *
  * @author zzy
  */
-@Schema(description = "摄像头分配功能参数")
+@Schema(description = "摄像头功能批量操作参数")
 @Data
-public class CameraAssignFunctionDTO {
-
-    @Schema(description = "摄像头ID", example = "1")
-    private Long cameraId;
+public class CameraFunctionBatchDTO {
 
     @Schema(description = "功能ID列表")
     private List<Long> functionIds;

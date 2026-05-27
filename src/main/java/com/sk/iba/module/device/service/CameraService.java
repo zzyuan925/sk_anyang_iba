@@ -1,11 +1,11 @@
 package com.sk.iba.module.device.service;
 
 import com.sk.iba.common.page.PageResult;
-import com.sk.iba.module.device.dto.CameraAssignFunctionDTO;
 import com.sk.iba.module.device.dto.CameraCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionBatchDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
-import com.sk.iba.module.device.vo.CameraFunctionVO;
+import com.sk.iba.module.device.vo.CameraFunctionConfigVO;
 import com.sk.iba.module.device.vo.CameraOptionVO;
 import com.sk.iba.module.device.vo.CameraVO;
 
@@ -47,12 +47,17 @@ public interface CameraService {
     List<CameraOptionVO> listEnabledCameraOptions();
 
     /**
-     * 查询摄像头已绑定功能
+     * 查询摄像头功能配置
      */
-    List<CameraFunctionVO> listCameraFunctions(Long cameraId);
+    CameraFunctionConfigVO getFunctionConfig(Long cameraId);
 
     /**
-     * 给摄像头重新分配功能
+     * 添加摄像头功能
      */
-    void assignFunctions(CameraAssignFunctionDTO assignFunctionDTO);
+    CameraFunctionConfigVO addFunctions(Long cameraId, CameraFunctionBatchDTO batchDTO);
+
+    /**
+     * 移除摄像头功能
+     */
+    CameraFunctionConfigVO removeFunctions(Long cameraId, CameraFunctionBatchDTO batchDTO);
 }

@@ -16,6 +16,7 @@ import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
 import com.sk.iba.module.device.mapper.CameraFunctionMapper;
 import com.sk.iba.module.device.service.AlgorithmFunctionService;
 import com.sk.iba.module.device.vo.FunctionOptionVO;
+import com.sk.iba.module.device.vo.FunctionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

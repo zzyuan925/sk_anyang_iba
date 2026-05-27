@@ -7,16 +7,14 @@ import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.enums.StatusEnum;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
-import com.sk.iba.module.device.dto.CameraAssignFunctionDTO;
 import com.sk.iba.module.device.dto.CameraCreateDTO;
+import com.sk.iba.module.device.dto.CameraFunctionBatchDTO;
 import com.sk.iba.module.device.dto.CameraQueryDTO;
 import com.sk.iba.module.device.dto.CameraUpdateDTO;
 import com.sk.iba.module.device.entity.*;
 import com.sk.iba.module.device.mapper.*;
 import com.sk.iba.module.device.service.CameraService;
-import com.sk.iba.module.device.vo.CameraFunctionVO;
-import com.sk.iba.module.device.vo.CameraOptionVO;
-import com.sk.iba.module.device.vo.CameraVO;
+import com.sk.iba.module.device.vo.*;
 import com.sk.iba.module.system.entity.SysRegion;
 import com.sk.iba.module.system.entity.SysUserRegion;
 import com.sk.iba.module.system.mapper.SysRegionMapper;
@@ -252,47 +250,19 @@ public class CameraServiceImpl implements CameraService {
     }
 
     @Override
-    public List<CameraFunctionVO> listCameraFunctions(Long cameraId) {
+    public CameraFunctionConfigVO getFunctionConfig(Long cameraId) {
         Camera camera = cameraMapper.selectById(cameraId);
         if (camera == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
         }
 
         checkCameraDataPermission(camera);
-
-        List<CameraFunction> cameraFunctions = cameraFunctionMapper.selectList(
-                new LambdaQueryWrapper<CameraFunction>()
-                        .eq(CameraFunction::getCameraId, cameraId)
-                        .orderByAsc(CameraFunction::getId)
-        );
-
-        if (cameraFunctions.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> functionIds = cameraFunctions.stream()
-                .map(CameraFunction::getFunctionId)
-                .toList();
-
-        List<AlgorithmFunction> functions = algorithmFunctionMapper.selectList(
-                new LambdaQueryWrapper<AlgorithmFunction>()
-                        .in(AlgorithmFunction::getId, functionIds)
-        );
-
-        Map<Long, AlgorithmFunction> functionMap = functions.stream()
-                .collect(Collectors.toMap(AlgorithmFunction::getId, function -> function));
-
-        return cameraFunctions.stream()
-                .map(cameraFunction -> toCameraFunctionVO(cameraFunction, functionMap.get(cameraFunction.getFunctionId())))
-                .filter(Objects::nonNull)
-                .toList();
+        return buildFunctionConfigVO(camera);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void assignFunctions(CameraAssignFunctionDTO assignFunctionDTO) {
-        Long cameraId = assignFunctionDTO.getCameraId();
-
+    public CameraFunctionConfigVO addFunctions(Long cameraId, CameraFunctionBatchDTO batchDTO) {
         Camera camera = cameraMapper.selectById(cameraId);
         if (camera == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
@@ -300,14 +270,12 @@ public class CameraServiceImpl implements CameraService {
 
         checkCameraDataPermission(camera);
 
-        Set<Long> newFunctionIds = assignFunctionDTO.getFunctionIds() == null
-                ? Set.of()
-                : new HashSet<>(assignFunctionDTO.getFunctionIds());
+        Set<Long> functionIds = getFunctionIds(batchDTO);
 
-        if (!newFunctionIds.isEmpty()) {
-            List<AlgorithmFunction> functions = algorithmFunctionMapper.selectBatchIds(newFunctionIds);
+        if (!functionIds.isEmpty()) {
+            List<AlgorithmFunction> functions = algorithmFunctionMapper.selectBatchIds(functionIds);
 
-            if (functions.size() != newFunctionIds.size()) {
+            if (functions.size() != functionIds.size()) {
                 throw new BusinessException("存在无效功能");
             }
 
@@ -315,28 +283,56 @@ public class CameraServiceImpl implements CameraService {
                     .anyMatch(function -> !StatusEnum.isEnabled(function.getStatus()));
 
             if (hasDisabledFunction) {
-                throw new BusinessException("不能分配已禁用功能");
+                throw new BusinessException("不能添加已禁用功能");
+            }
+
+            List<CameraFunction> oldCameraFunctions = cameraFunctionMapper.selectList(
+                    new LambdaQueryWrapper<CameraFunction>()
+                            .eq(CameraFunction::getCameraId, cameraId)
+            );
+
+            Set<Long> oldFunctionIds = oldCameraFunctions.stream()
+                    .map(CameraFunction::getFunctionId)
+                    .collect(Collectors.toSet());
+
+            List<CameraFunction> addList = functionIds.stream()
+                    .filter(functionId -> !oldFunctionIds.contains(functionId))
+                    .map(functionId -> {
+                        CameraFunction cameraFunction = new CameraFunction();
+                        cameraFunction.setCameraId(cameraId);
+                        cameraFunction.setFunctionId(functionId);
+                        return cameraFunction;
+                    })
+                    .toList();
+
+            if (!addList.isEmpty()) {
+                cameraFunctionMapper.insertBatch(addList);
             }
         }
 
-        List<CameraFunction> oldCameraFunctions = cameraFunctionMapper.selectList(
-                new LambdaQueryWrapper<CameraFunction>()
-                        .eq(CameraFunction::getCameraId, cameraId)
-        );
+        return buildFunctionConfigVO(camera);
+    }
 
-        Set<Long> oldFunctionIds = oldCameraFunctions.stream()
-                .map(CameraFunction::getFunctionId)
-                .collect(Collectors.toSet());
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CameraFunctionConfigVO removeFunctions(Long cameraId, CameraFunctionBatchDTO batchDTO) {
+        Camera camera = cameraMapper.selectById(cameraId);
+        if (camera == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "摄像头不存在");
+        }
 
-        Set<Long> addFunctionIds = new HashSet<>(newFunctionIds);
-        addFunctionIds.removeAll(oldFunctionIds);
+        checkCameraDataPermission(camera);
 
-        Set<Long> removeFunctionIds = new HashSet<>(oldFunctionIds);
-        removeFunctionIds.removeAll(newFunctionIds);
+        Set<Long> functionIds = getFunctionIds(batchDTO);
 
-        if (!removeFunctionIds.isEmpty()) {
-            List<Long> removeCameraFunctionIds = oldCameraFunctions.stream()
-                    .filter(item -> removeFunctionIds.contains(item.getFunctionId()))
+        if (!functionIds.isEmpty()) {
+            List<CameraFunction> removeCameraFunctions = cameraFunctionMapper.selectList(
+                    new LambdaQueryWrapper<CameraFunction>()
+                            .eq(CameraFunction::getCameraId, cameraId)
+                            .in(CameraFunction::getFunctionId, functionIds)
+            );
+
+            List<Long> removeCameraFunctionIds = removeCameraFunctions.stream()
                     .map(CameraFunction::getId)
                     .toList();
 
@@ -352,18 +348,57 @@ public class CameraServiceImpl implements CameraService {
             }
         }
 
-        if (!addFunctionIds.isEmpty()) {
-            List<CameraFunction> cameraFunctionList = addFunctionIds.stream()
-                    .map(functionId -> {
-                        CameraFunction cameraFunction = new CameraFunction();
-                        cameraFunction.setCameraId(cameraId);
-                        cameraFunction.setFunctionId(functionId);
-                        return cameraFunction;
-                    })
-                    .toList();
+        return buildFunctionConfigVO(camera);
+    }
 
-            cameraFunctionMapper.insertBatch(cameraFunctionList);
+    private Set<Long> getFunctionIds(CameraFunctionBatchDTO batchDTO) {
+        if (batchDTO == null || batchDTO.getFunctionIds() == null) {
+            return Set.of();
         }
+
+        return batchDTO.getFunctionIds().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private CameraFunctionConfigVO buildFunctionConfigVO(Camera camera) {
+        List<AlgorithmFunction> enabledFunctions = algorithmFunctionMapper.selectList(
+                new LambdaQueryWrapper<AlgorithmFunction>()
+                        .eq(AlgorithmFunction::getStatus, StatusEnum.ENABLED.getCode())
+                        .orderByDesc(AlgorithmFunction::getCreateTime)
+        );
+
+        List<CameraFunction> cameraFunctions = cameraFunctionMapper.selectList(
+                new LambdaQueryWrapper<CameraFunction>()
+                        .eq(CameraFunction::getCameraId, camera.getId())
+                        .orderByAsc(CameraFunction::getId)
+        );
+
+        Map<Long, CameraFunction> cameraFunctionMap = cameraFunctions.stream()
+                .collect(Collectors.toMap(CameraFunction::getFunctionId, item -> item));
+
+        List<CameraFunctionVO> selectedFunctions = enabledFunctions.stream()
+                .filter(function -> cameraFunctionMap.containsKey(function.getId()))
+                .map(function -> toCameraFunctionVO(cameraFunctionMap.get(function.getId()), function))
+                .toList();
+
+        List<FunctionOptionVO> unselectedFunctions = enabledFunctions.stream()
+                .filter(function -> !cameraFunctionMap.containsKey(function.getId()))
+                .map(this::toFunctionOptionVO)
+                .toList();
+
+        CameraFunctionConfigVO vo = new CameraFunctionConfigVO();
+        vo.setCameraId(camera.getId());
+        vo.setCameraName(camera.getCameraName());
+        vo.setSelectedFunctions(selectedFunctions);
+        vo.setUnselectedFunctions(unselectedFunctions);
+        return vo;
+    }
+
+    private FunctionOptionVO toFunctionOptionVO(AlgorithmFunction function) {
+        FunctionOptionVO vo = new FunctionOptionVO();
+        BeanUtils.copyProperties(function, vo);
+        return vo;
     }
 
     private CameraFunctionVO toCameraFunctionVO(CameraFunction cameraFunction, AlgorithmFunction function) {

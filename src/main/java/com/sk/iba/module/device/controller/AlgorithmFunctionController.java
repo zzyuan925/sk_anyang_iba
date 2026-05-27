@@ -9,6 +9,7 @@ import com.sk.iba.module.device.dto.FunctionQueryDTO;
 import com.sk.iba.module.device.dto.FunctionUpdateDTO;
 import com.sk.iba.module.device.service.AlgorithmFunctionService;
 import com.sk.iba.module.device.vo.FunctionOptionVO;
+import com.sk.iba.module.device.vo.FunctionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
