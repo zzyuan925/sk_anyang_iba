@@ -89,12 +89,12 @@ public class AlarmRecord {
     private Integer isFalseAlarm;
 
     /**
-     * 误报标记人ID
+     * 误报状态操作人ID
      */
     private Long falseAlarmBy;
 
     /**
-     * 误报标记时间
+     * 误报状态操作时间
      */
     private LocalDateTime falseAlarmTime;
 

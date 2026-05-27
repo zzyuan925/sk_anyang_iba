@@ -56,10 +56,10 @@ public class AlarmRecordVO {
     @Schema(description = "是否标记为误报：0未标记，1误报", example = "0")
     private Integer isFalseAlarm;
 
-    @Schema(description = "误报标记人ID", example = "1")
+    @Schema(description = "误报状态操作人ID", example = "1")
     private Long falseAlarmBy;
 
-    @Schema(description = "误报标记时间")
+    @Schema(description = "误报状态操作时间")
     private LocalDateTime falseAlarmTime;
 
     @Schema(description = "误报备注")

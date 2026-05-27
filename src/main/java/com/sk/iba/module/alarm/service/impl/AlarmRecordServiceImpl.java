@@ -1,8 +1,10 @@
 package com.sk.iba.module.alarm.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.sk.iba.common.constant.AlarmConstants;
 import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
@@ -12,8 +14,6 @@ import com.sk.iba.module.alarm.entity.AlarmRecord;
 import com.sk.iba.module.alarm.mapper.AlarmRecordMapper;
 import com.sk.iba.module.alarm.service.AlarmRecordService;
 import com.sk.iba.module.alarm.vo.AlarmRecordVO;
-import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
-import com.sk.iba.module.device.mapper.CameraMapper;
 import com.sk.iba.module.system.entity.SysRegion;
 import com.sk.iba.module.system.entity.SysUserRegion;
 import com.sk.iba.module.system.mapper.SysRegionMapper;
@@ -38,19 +38,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AlarmRecordServiceImpl implements AlarmRecordService {
 
-    private static final Integer FALSE_ALARM_NO = 0;
-
-    private static final Integer FALSE_ALARM_YES = 1;
-
     private final AlarmRecordMapper alarmRecordMapper;
-
-    private final CameraMapper cameraMapper;
 
     private final SysRegionMapper sysRegionMapper;
 
     private final SysUserRegionMapper sysUserRegionMapper;
-
-    private final AlgorithmFunctionMapper algorithmFunctionMapper;
 
     @Override
     public PageResult<AlarmRecordVO> pageAlarmRecords(AlarmRecordQueryDTO queryDTO) {
@@ -104,17 +96,19 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
         AlarmRecord oldAlarmRecord = getAlarmRecord(id);
         checkAlarmDataPermission(oldAlarmRecord);
 
-        AlarmRecord update = new AlarmRecord();
-        update.setId(id);
-        update.setIsFalseAlarm(FALSE_ALARM_YES);
-        update.setFalseAlarmBy(SecurityUtils.getUserId());
-        update.setFalseAlarmTime(LocalDateTime.now());
-
+        String remark = null;
         if (falseAlarmDTO != null && StringUtils.hasText(falseAlarmDTO.getFalseAlarmRemark())) {
-            update.setFalseAlarmRemark(falseAlarmDTO.getFalseAlarmRemark().trim());
+            remark = falseAlarmDTO.getFalseAlarmRemark().trim();
         }
 
-        alarmRecordMapper.updateById(update);
+        alarmRecordMapper.update(null,
+                new LambdaUpdateWrapper<AlarmRecord>()
+                        .eq(AlarmRecord::getId, id)
+                        .set(AlarmRecord::getIsFalseAlarm, AlarmConstants.FALSE_ALARM_YES)
+                        .set(AlarmRecord::getFalseAlarmBy, SecurityUtils.getUserId())
+                        .set(AlarmRecord::getFalseAlarmTime, LocalDateTime.now())
+                        .set(AlarmRecord::getFalseAlarmRemark, remark)
+        );
     }
 
     @Override
@@ -123,14 +117,14 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
         AlarmRecord oldAlarmRecord = getAlarmRecord(id);
         checkAlarmDataPermission(oldAlarmRecord);
 
-        AlarmRecord update = new AlarmRecord();
-        update.setId(id);
-        update.setIsFalseAlarm(FALSE_ALARM_NO);
-        update.setFalseAlarmBy(null);
-        update.setFalseAlarmTime(null);
-        update.setFalseAlarmRemark(null);
-
-        alarmRecordMapper.updateById(update);
+        alarmRecordMapper.update(null,
+                new LambdaUpdateWrapper<AlarmRecord>()
+                        .eq(AlarmRecord::getId, id)
+                        .set(AlarmRecord::getIsFalseAlarm, AlarmConstants.FALSE_ALARM_NO)
+                        .set(AlarmRecord::getFalseAlarmBy, SecurityUtils.getUserId())
+                        .set(AlarmRecord::getFalseAlarmTime, LocalDateTime.now())
+                        .set(AlarmRecord::getFalseAlarmRemark, null)
+        );
     }
 
     private AlarmRecord getAlarmRecord(Long id) {
