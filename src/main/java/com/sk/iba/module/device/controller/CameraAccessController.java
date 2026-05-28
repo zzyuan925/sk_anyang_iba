@@ -28,13 +28,7 @@ public class CameraAccessController {
 
     private final CameraAccessService cameraAccessService;
 
-    @OperationLog(
-            module = "摄像头接入",
-            name = "直连摄像头识别",
-            type = OperationType.QUERY,
-            recordParams = false,
-            recordResult = false
-    )
+    @OperationLog(module = "摄像头接入", name = "直连摄像头识别", type = OperationType.QUERY, recordParams = false, recordResult = false)
     @Operation(summary = "直连摄像头识别", description = "根据 IP、RTSP端口、账号、密码调用海康 ISAPI 获取设备信息和码流地址")
     @PostMapping("/direct/probe")
     @PreAuthorize("hasAuthority('device:camera:create')")
