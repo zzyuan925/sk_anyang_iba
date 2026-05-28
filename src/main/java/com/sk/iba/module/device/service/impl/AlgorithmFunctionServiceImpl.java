@@ -11,8 +11,10 @@ import com.sk.iba.module.device.dto.FunctionCreateDTO;
 import com.sk.iba.module.device.dto.FunctionQueryDTO;
 import com.sk.iba.module.device.dto.FunctionUpdateDTO;
 import com.sk.iba.module.device.entity.AlgorithmFunction;
+import com.sk.iba.module.device.entity.AlgorithmPackage;
 import com.sk.iba.module.device.entity.CameraFunction;
 import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
+import com.sk.iba.module.device.mapper.AlgorithmPackageMapper;
 import com.sk.iba.module.device.mapper.CameraFunctionMapper;
 import com.sk.iba.module.device.service.AlgorithmFunctionService;
 import com.sk.iba.module.device.vo.FunctionOptionVO;
@@ -35,6 +37,8 @@ public class AlgorithmFunctionServiceImpl implements AlgorithmFunctionService {
     private final AlgorithmFunctionMapper algorithmFunctionMapper;
 
     private final CameraFunctionMapper cameraFunctionMapper;
+
+    private final AlgorithmPackageMapper algorithmPackageMapper;
 
     @Override
     public PageResult<FunctionVO> pageFunctions(FunctionQueryDTO queryDTO) {
@@ -143,6 +147,13 @@ public class AlgorithmFunctionServiceImpl implements AlgorithmFunctionService {
 
         if (count > 0) {
             throw new BusinessException("该功能已绑定摄像头，不能删除");
+        }
+
+        Long packageCount = algorithmPackageMapper.selectCount(new LambdaQueryWrapper<AlgorithmPackage>()
+                .eq(AlgorithmPackage::getFunctionId, id));
+
+        if (packageCount > 0) {
+            throw new BusinessException("该功能下存在算法包，不能删除");
         }
 
         algorithmFunctionMapper.deleteById(id);
