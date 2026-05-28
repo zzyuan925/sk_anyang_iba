@@ -32,3 +32,6 @@ iba:
   jwt:
     secret: sk-iba-intelligent-behavior-analysis-system-secret-2026
     expire-minutes: 1440
+sk:
+  file:
+    algorithm-package-dir: D:/sk_iba/algorithm_packages
