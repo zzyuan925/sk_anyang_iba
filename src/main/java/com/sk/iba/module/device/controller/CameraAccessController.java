@@ -44,10 +44,8 @@ public class CameraAccessController {
     @Operation(summary = "平台摄像头搜索", description = "根据摄像头名称从海康平台获取摄像头列表")
     @GetMapping("/platform/search")
     @PreAuthorize("hasAuthority('device:camera:create')")
-    public Result<List<PlatformCameraVO>> searchPlatformCamera(@RequestParam(required = false) String cameraName,
-                                                               @RequestParam(defaultValue = "1") Integer pageNo,
-                                                               @RequestParam(defaultValue = "1000") Integer pageSize) {
-        return Result.success(cameraAccessService.searchPlatformCamera(cameraName, pageNo, pageSize));
+    public Result<List<PlatformCameraVO>> searchPlatformCamera(@RequestParam(required = false) String cameraName) {
+        return Result.success(cameraAccessService.searchPlatformCamera(cameraName));
     }
 
     @OperationLog(module = "摄像头接入", name = "获取平台摄像头预览地址", type = OperationType.QUERY, recordResult = false)

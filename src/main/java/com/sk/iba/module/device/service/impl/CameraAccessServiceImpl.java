@@ -84,8 +84,8 @@ public class CameraAccessServiceImpl implements CameraAccessService {
     }
 
     @Override
-    public List<PlatformCameraVO> searchPlatformCamera(String cameraName, Integer pageNo, Integer pageSize) {
-        JsonNode response = hikPlatformClient.searchCamera(cameraName, pageNo, pageSize);
+    public List<PlatformCameraVO> searchPlatformCamera(String cameraName) {
+        JsonNode response = hikPlatformClient.searchCameraByName(cameraName);
         checkPlatformSuccess(response);
 
         JsonNode listNode = response.path("data").path("list");

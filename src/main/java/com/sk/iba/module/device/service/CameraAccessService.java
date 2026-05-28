@@ -21,7 +21,7 @@ public interface CameraAccessService {
     /**
      * 平台摄像头搜索
      */
-    List<PlatformCameraVO> searchPlatformCamera(String cameraName, Integer pageNo, Integer pageSize);
+    List<PlatformCameraVO> searchPlatformCamera(String cameraName);
 
     /**
      * 获取平台摄像头预览地址
