@@ -22,7 +22,7 @@ public class CameraCreateDTO {
     @Schema(description = "摄像头编码", example = "camera_001")
     @NotBlank(message = "摄像头编码不能为空")
     @Size(max = 50, message = "摄像头编码长度不能超过 50")
-    @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9_]*$", message = "摄像头编码只能由字母、数字、下划线组成，并且必须以字母开头")
+    @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9_-]*$", message = "摄像头编码只能由字母、数字、下划线、中横线组成，并且必须以字母开头")
     private String cameraCode;
 
     @Schema(description = "所属区域ID", example = "1")

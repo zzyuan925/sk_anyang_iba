@@ -1,15 +1,19 @@
 package com.sk.iba.module.monitor.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sk.iba.common.constant.LiveStreamConstants;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.module.monitor.entity.MediaServer;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ZLMediaKit API 客户端
@@ -19,7 +23,13 @@ import java.net.URI;
 @Component
 public class ZlmClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final OkHttpClient okHttpClient = new OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build();
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 添加 RTSP 拉流代理
@@ -28,30 +38,47 @@ public class ZlmClient {
                                String streamApp,
                                String streamId,
                                String sourceUrl) {
-        URI uri = UriComponentsBuilder
-                .fromHttpUrl(trimEndSlash(mediaServer.getApiBaseUrl()))
-                .path("/index/api/addStreamProxy")
-                .queryParam("secret", mediaServer.getSecret())
-                .queryParam("vhost", LiveStreamConstants.DEFAULT_VHOST)
-                .queryParam("app", streamApp)
-                .queryParam("stream", streamId)
-                .queryParam("url", sourceUrl)
-                .queryParam("enable_hls", 0)
-                .queryParam("enable_mp4", 0)
-                .queryParam("rtp_type", 0)
-                .build()
-                .encode()
-                .toUri();
-
-        JsonNode response = restTemplate.getForObject(uri, JsonNode.class);
-        if (response == null) {
-            throw new BusinessException("ZLM 拉流失败：无响应");
+        HttpUrl baseUrl = HttpUrl.parse(trimEndSlash(mediaServer.getApiBaseUrl()) + "/index/api/addStreamProxy");
+        if (baseUrl == null) {
+            throw new BusinessException("ZLM API 地址不合法");
         }
 
-        int code = response.path("code").asInt(-1);
-        if (code != 0) {
-            String msg = response.path("msg").asText("未知错误");
-            throw new BusinessException("ZLM 拉流失败：" + msg);
+        HttpUrl url = baseUrl.newBuilder()
+                .addQueryParameter("secret", mediaServer.getSecret())
+                .addQueryParameter("vhost", LiveStreamConstants.DEFAULT_VHOST)
+                .addQueryParameter("app", streamApp)
+                .addQueryParameter("stream", streamId)
+                .addQueryParameter("url", sourceUrl)
+                .addQueryParameter("enable_hls", "0")
+                .addQueryParameter("enable_mp4", "0")
+                .addQueryParameter("rtp_type", "0")
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new BusinessException("ZLM 拉流失败，状态码：" + response.code());
+            }
+
+            ResponseBody responseBody = response.body();
+            if (responseBody == null) {
+                throw new BusinessException("ZLM 拉流失败：无响应");
+            }
+
+            JsonNode responseNode = objectMapper.readTree(responseBody.string());
+            int code = responseNode.path("code").asInt(-1);
+            if (code != 0) {
+                String msg = responseNode.path("msg").asText("未知错误");
+                throw new BusinessException("ZLM 拉流失败：" + msg);
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("ZLM 拉流失败：" + e.getMessage());
         }
     }
 
