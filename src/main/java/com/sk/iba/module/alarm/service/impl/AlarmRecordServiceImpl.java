@@ -8,6 +8,7 @@ import com.sk.iba.common.constant.AlarmConstants;
 import com.sk.iba.common.enums.ResultCode;
 import com.sk.iba.common.exception.BusinessException;
 import com.sk.iba.common.page.PageResult;
+import com.sk.iba.module.alarm.dto.AlarmFalseAlarmBatchDTO;
 import com.sk.iba.module.alarm.dto.AlarmFalseAlarmDTO;
 import com.sk.iba.module.alarm.dto.AlarmRecordQueryDTO;
 import com.sk.iba.module.alarm.entity.AlarmRecord;
@@ -134,6 +135,84 @@ public class AlarmRecordServiceImpl implements AlarmRecordService {
                         .set(AlarmRecord::getFalseAlarmTime, LocalDateTime.now())
                         .set(AlarmRecord::getFalseAlarmRemark, null)
         );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAlarmRecords(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException("告警ID列表不能为空");
+        }
+
+        List<Long> distinctIds = ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (distinctIds.isEmpty()) {
+            throw new BusinessException("告警ID列表不能为空");
+        }
+
+        List<AlarmRecord> alarmRecords = alarmRecordMapper.selectBatchIds(distinctIds);
+        if (alarmRecords.size() != distinctIds.size()) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "存在无效告警记录");
+        }
+
+        checkAlarmDataPermissions(alarmRecords);
+
+        alarmRecordMapper.deleteBatchIds(distinctIds);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void markFalseAlarms(AlarmFalseAlarmBatchDTO batchDTO) {
+        if (batchDTO == null || batchDTO.getIds() == null || batchDTO.getIds().isEmpty()) {
+            throw new BusinessException("告警ID列表不能为空");
+        }
+
+        List<Long> distinctIds = batchDTO.getIds().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (distinctIds.isEmpty()) {
+            throw new BusinessException("告警ID列表不能为空");
+        }
+
+        List<AlarmRecord> alarmRecords = alarmRecordMapper.selectBatchIds(distinctIds);
+        if (alarmRecords.size() != distinctIds.size()) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "存在无效告警记录");
+        }
+
+        checkAlarmDataPermissions(alarmRecords);
+
+        String remark = null;
+        if (StringUtils.hasText(batchDTO.getFalseAlarmRemark())) {
+            remark = batchDTO.getFalseAlarmRemark().trim();
+        }
+
+        alarmRecordMapper.update(null,
+                new LambdaUpdateWrapper<AlarmRecord>()
+                        .in(AlarmRecord::getId, distinctIds)
+                        .set(AlarmRecord::getIsFalseAlarm, AlarmConstants.FALSE_ALARM_YES)
+                        .set(AlarmRecord::getFalseAlarmBy, SecurityUtils.getUserId())
+                        .set(AlarmRecord::getFalseAlarmTime, LocalDateTime.now())
+                        .set(AlarmRecord::getFalseAlarmRemark, remark)
+        );
+    }
+
+    private void checkAlarmDataPermissions(List<AlarmRecord> alarmRecords) {
+        if (SecurityUtils.isSuperAdmin()) {
+            return;
+        }
+
+        Set<Long> visibleRegionIds = getVisibleRegionIds();
+        boolean hasNoPermission = alarmRecords.stream()
+                .anyMatch(alarmRecord -> !visibleRegionIds.contains(alarmRecord.getRegionId()));
+
+        if (hasNoPermission) {
+            throw new BusinessException("无权操作部分告警记录");
+        }
     }
 
     private AlarmRecord getAlarmRecord(Long id) {

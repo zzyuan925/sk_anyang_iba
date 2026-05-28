@@ -4,7 +4,9 @@ import com.sk.iba.common.log.OperationLog;
 import com.sk.iba.common.log.OperationType;
 import com.sk.iba.common.page.PageResult;
 import com.sk.iba.common.result.Result;
+import com.sk.iba.module.alarm.dto.AlarmFalseAlarmBatchDTO;
 import com.sk.iba.module.alarm.dto.AlarmFalseAlarmDTO;
+import com.sk.iba.module.alarm.dto.AlarmRecordBatchDeleteDTO;
 import com.sk.iba.module.alarm.dto.AlarmRecordQueryDTO;
 import com.sk.iba.module.alarm.service.AlarmRecordService;
 import com.sk.iba.module.alarm.vo.AlarmRecordVO;
@@ -60,6 +62,15 @@ public class AlarmRecordController {
         return Result.success();
     }
 
+    @OperationLog(module = "告警记录", name = "批量删除告警", type = OperationType.DELETE, recordResult = false)
+    @Operation(summary = "批量逻辑删除告警")
+    @DeleteMapping("/batch")
+    @PreAuthorize("hasAuthority('alarm:record:delete')")
+    public Result<Void> batchDelete(@RequestBody @Valid AlarmRecordBatchDeleteDTO batchDeleteDTO) {
+        alarmRecordService.deleteAlarmRecords(batchDeleteDTO.getIds());
+        return Result.success();
+    }
+
     @OperationLog(module = "告警记录", name = "标记误报", type = OperationType.UPDATE, recordResult = false)
     @Operation(summary = "标记误报")
     @Parameter(name = "id", description = "告警ID", required = true, example = "1")
@@ -68,6 +79,15 @@ public class AlarmRecordController {
     public Result<Void> markFalseAlarm(@PathVariable @NotNull(message = "告警ID不能为空") Long id,
                                        @RequestBody @Valid AlarmFalseAlarmDTO falseAlarmDTO) {
         alarmRecordService.markFalseAlarm(id, falseAlarmDTO);
+        return Result.success();
+    }
+
+    @OperationLog(module = "告警记录", name = "批量标记误报", type = OperationType.UPDATE, recordResult = false)
+    @Operation(summary = "批量标记误报")
+    @PutMapping("/false-alarm/batch")
+    @PreAuthorize("hasAuthority('alarm:record:falseAlarm')")
+    public Result<Void> batchMarkFalseAlarm(@RequestBody @Valid AlarmFalseAlarmBatchDTO batchDTO) {
+        alarmRecordService.markFalseAlarms(batchDTO);
         return Result.success();
     }
 
