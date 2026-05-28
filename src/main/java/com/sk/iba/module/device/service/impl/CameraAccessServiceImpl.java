@@ -63,7 +63,7 @@ public class CameraAccessServiceImpl implements CameraAccessService {
 
         CameraDirectProbeVO vo = new CameraDirectProbeVO();
         vo.setCameraName(cameraName);
-        vo.setCameraCode(buildCameraCode(serialNumber, ip));
+        vo.setCameraCode(buildCameraCode(serialNumber));
         vo.setSourceType(SOURCE_TYPE_RTSP);
         vo.setSourceUrl(buildRtspUrl(ip, rtspPort, username, password, streamId));
         vo.setIp(ip);
@@ -151,12 +151,12 @@ public class CameraAccessServiceImpl implements CameraAccessService {
                 .replace("+", "%20");
     }
 
-    private String buildCameraCode(String serialNumber, String ip) {
+    private String buildCameraCode(String serialNumber) {
         if (StringUtils.hasText(serialNumber)) {
             return serialNumber.trim();
         }
 
-        return "camera_" + ip;
+        return "序列号为空，请手动输入";
     }
 
     private Document parseXml(String xml) {

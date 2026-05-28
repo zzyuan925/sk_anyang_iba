@@ -46,7 +46,7 @@ public class MonitorLiveController {
         monitorLiveService.handleStreamChanged(dto);
         return Map.of(
                 "code", 0,
-                "msg", "success"
+                "close", true
         );
     }
 }

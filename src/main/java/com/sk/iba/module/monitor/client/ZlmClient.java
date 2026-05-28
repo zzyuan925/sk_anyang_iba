@@ -73,6 +73,9 @@ public class ZlmClient {
             int code = responseNode.path("code").asInt(-1);
             if (code != 0) {
                 String msg = responseNode.path("msg").asText("未知错误");
+                if (isStreamAlreadyExists(msg)) {
+                    return;
+                }
                 throw new BusinessException("ZLM 拉流失败：" + msg);
             }
         } catch (BusinessException e) {
@@ -80,6 +83,11 @@ public class ZlmClient {
         } catch (Exception e) {
             throw new BusinessException("ZLM 拉流失败：" + e.getMessage());
         }
+    }
+
+    private boolean isStreamAlreadyExists(String msg) {
+        return StringUtils.hasText(msg)
+                && msg.toLowerCase().contains("stream already exists");
     }
 
     public String buildPlayUrl(MediaServer mediaServer,
