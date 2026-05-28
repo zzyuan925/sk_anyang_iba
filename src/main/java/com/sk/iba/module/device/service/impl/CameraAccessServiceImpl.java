@@ -1,19 +1,27 @@
 package com.sk.iba.module.device.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sk.iba.common.exception.BusinessException;
+import com.sk.iba.module.device.client.HikPlatformClient;
 import com.sk.iba.module.device.client.HikvisionDirectClient;
 import com.sk.iba.module.device.dto.CameraDirectProbeDTO;
 import com.sk.iba.module.device.service.CameraAccessService;
 import com.sk.iba.module.device.vo.CameraDirectProbeVO;
+import com.sk.iba.module.device.vo.PlatformCameraVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 摄像头接入 Service 实现
@@ -35,6 +43,8 @@ public class CameraAccessServiceImpl implements CameraAccessService {
     private static final Integer DEFAULT_RTSP_PORT = 554;
 
     private final HikvisionDirectClient hikvisionDirectClient;
+
+    private final HikPlatformClient hikPlatformClient;
 
     @Override
     public CameraDirectProbeVO directProbe(CameraDirectProbeDTO probeDTO) {
@@ -71,6 +81,59 @@ public class CameraAccessServiceImpl implements CameraAccessService {
         vo.setUsername(username);
         vo.setPassword(password);
         return vo;
+    }
+
+    @Override
+    public List<PlatformCameraVO> searchPlatformCamera(String cameraName, Integer pageNo, Integer pageSize) {
+        JsonNode response = hikPlatformClient.searchCamera(cameraName, pageNo, pageSize);
+        checkPlatformSuccess(response);
+
+        JsonNode listNode = response.path("data").path("list");
+        if (!listNode.isArray()) {
+            return List.of();
+        }
+
+        List<PlatformCameraVO> result = new ArrayList<>();
+        for (JsonNode item : listNode) {
+            String indexCode = item.path("indexCode").asText(null);
+            String name = item.path("name").asText(null);
+
+            if (!StringUtils.hasText(indexCode)) {
+                continue;
+            }
+
+            PlatformCameraVO vo = new PlatformCameraVO();
+            vo.setIndexCode(indexCode);
+            vo.setName(name);
+            result.add(vo);
+        }
+
+        return result;
+    }
+
+    @Override
+    public String getPlatformPreviewUrl(String cameraIndexCode) {
+        JsonNode response = hikPlatformClient.getPreviewUrl(cameraIndexCode);
+        checkPlatformSuccess(response);
+
+        String url = response.path("data").path("url").asText(null);
+        if (!StringUtils.hasText(url)) {
+            throw new BusinessException("海康平台未返回预览地址");
+        }
+
+        return url;
+    }
+
+    private void checkPlatformSuccess(JsonNode response) {
+        if (response == null || response.isMissingNode() || response.isNull()) {
+            throw new BusinessException("海康平台响应为空");
+        }
+
+        String code = response.path("code").asText();
+        if (!"0".equals(code)) {
+            String msg = response.path("msg").asText("未知错误");
+            throw new BusinessException("海康平台请求失败：" + msg);
+        }
     }
 
     private Element getDefaultStreamElement(Document doc) {

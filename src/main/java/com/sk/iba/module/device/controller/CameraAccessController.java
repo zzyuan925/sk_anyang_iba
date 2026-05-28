@@ -6,13 +6,17 @@ import com.sk.iba.common.result.Result;
 import com.sk.iba.module.device.dto.CameraDirectProbeDTO;
 import com.sk.iba.module.device.service.CameraAccessService;
 import com.sk.iba.module.device.vo.CameraDirectProbeVO;
+import com.sk.iba.module.device.vo.PlatformCameraVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 摄像头接入 Controller
@@ -34,5 +38,23 @@ public class CameraAccessController {
     @PreAuthorize("hasAuthority('device:camera:create')")
     public Result<CameraDirectProbeVO> directProbe(@RequestBody @Valid CameraDirectProbeDTO probeDTO) {
         return Result.success(cameraAccessService.directProbe(probeDTO));
+    }
+    
+    @OperationLog(module = "摄像头接入", name = "平台摄像头搜索", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "平台摄像头搜索", description = "根据摄像头名称从海康平台获取摄像头列表")
+    @GetMapping("/platform/search")
+    @PreAuthorize("hasAuthority('device:camera:create')")
+    public Result<List<PlatformCameraVO>> searchPlatformCamera(@RequestParam(required = false) String cameraName,
+                                                               @RequestParam(defaultValue = "1") Integer pageNo,
+                                                               @RequestParam(defaultValue = "1000") Integer pageSize) {
+        return Result.success(cameraAccessService.searchPlatformCamera(cameraName, pageNo, pageSize));
+    }
+
+    @OperationLog(module = "摄像头接入", name = "获取平台摄像头预览地址", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "获取平台摄像头预览地址", description = "根据平台监控点唯一标识获取预览取流URL")
+    @PostMapping("/platform/preview-url")
+    @PreAuthorize("hasAuthority('device:camera:create')")
+    public Result<String> getPlatformPreviewUrl(@RequestParam @NotBlank(message = "监控点唯一标识不能为空") String cameraIndexCode) {
+        return Result.success(cameraAccessService.getPlatformPreviewUrl(cameraIndexCode));
     }
 }
