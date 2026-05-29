@@ -49,6 +49,16 @@ public class AlgorithmRuntimeController {
         return Result.success(algorithmRuntimeService.deployAlgorithmPackage(deployDTO));
     }
 
+    @OperationLog(module = "算法运行管理", name = "取消部署算法", type = OperationType.DELETE, recordResult = false)
+    @Operation(summary = "取消部署算法")
+    @Parameter(name = "id", description = "算法运行ID", required = true, example = "1")
+    @PostMapping("/{id}/undeploy")
+    @PreAuthorize("hasAuthority('device:algorithm-runtime:undeploy')")
+    public Result<Void> undeploy(@PathVariable @NotNull(message = "算法运行ID不能为空") Long id) {
+        algorithmRuntimeService.undeployAlgorithm(id);
+        return Result.success();
+    }
+
     @OperationLog(module = "算法运行管理", name = "启动算法", type = OperationType.UPDATE, recordResult = false)
     @Operation(summary = "启动算法")
     @Parameter(name = "id", description = "算法运行ID", required = true, example = "1")

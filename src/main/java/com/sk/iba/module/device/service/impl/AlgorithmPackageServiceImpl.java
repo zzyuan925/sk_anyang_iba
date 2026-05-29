@@ -12,8 +12,10 @@ import com.sk.iba.module.device.dto.AlgorithmPackageQueryDTO;
 import com.sk.iba.module.device.dto.AlgorithmPackageUpdateDTO;
 import com.sk.iba.module.device.entity.AlgorithmFunction;
 import com.sk.iba.module.device.entity.AlgorithmPackage;
+import com.sk.iba.module.device.entity.AlgorithmRuntime;
 import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
 import com.sk.iba.module.device.mapper.AlgorithmPackageMapper;
+import com.sk.iba.module.device.mapper.AlgorithmRuntimeMapper;
 import com.sk.iba.module.device.service.AlgorithmPackageService;
 import com.sk.iba.module.device.vo.AlgorithmPackageOptionVO;
 import com.sk.iba.module.device.vo.AlgorithmPackageVO;
@@ -40,6 +42,8 @@ public class AlgorithmPackageServiceImpl implements AlgorithmPackageService {
     private final AlgorithmFunctionMapper algorithmFunctionMapper;
 
     private final FileUploadUtil fileUploadUtil;
+
+    private final AlgorithmRuntimeMapper algorithmRuntimeMapper;
 
     @Override
     public PageResult<AlgorithmPackageVO> pageAlgorithmPackages(AlgorithmPackageQueryDTO queryDTO) {
@@ -130,6 +134,16 @@ public class AlgorithmPackageServiceImpl implements AlgorithmPackageService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteAlgorithmPackage(Long id) {
         AlgorithmPackage algorithmPackage = getAlgorithmPackage(id);
+
+        Long runtimeCount = algorithmRuntimeMapper.selectCount(
+                new LambdaQueryWrapper<AlgorithmRuntime>()
+                        .eq(AlgorithmRuntime::getAlgorithmPackageId, id)
+        );
+
+        if (runtimeCount != null && runtimeCount > 0) {
+            throw new BusinessException("该算法包已部署，不能删除，请先取消部署");
+        }
+
         algorithmPackageMapper.deleteById(algorithmPackage.getId());
     }
 

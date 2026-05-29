@@ -23,6 +23,11 @@ public interface AlgorithmRuntimeService {
     Long deployAlgorithmPackage(AlgorithmRuntimeDeployDTO deployDTO);
 
     /**
+     * 取消部署
+     */
+    void undeployAlgorithm(Long id);
+
+    /**
      * 启动算法
      */
     void startAlgorithm(Long id);

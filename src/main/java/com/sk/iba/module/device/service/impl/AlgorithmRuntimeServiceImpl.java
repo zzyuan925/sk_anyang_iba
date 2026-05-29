@@ -126,6 +126,18 @@ public class AlgorithmRuntimeServiceImpl implements AlgorithmRuntimeService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void undeployAlgorithm(Long id) {
+        AlgorithmRuntime runtime = getRuntime(id);
+
+        if (Objects.equals(runtime.getRunStatus(), AlgorithmRuntimeConstants.RUN_STATUS_RUNNING)) {
+            throw new BusinessException("算法正在运行，请先停止后再取消部署");
+        }
+
+        algorithmRuntimeMapper.deleteById(id);
+    }
+
+    @Override
     public void startAlgorithm(Long id) {
         AlgorithmRuntime runtime = getRuntime(id);
 

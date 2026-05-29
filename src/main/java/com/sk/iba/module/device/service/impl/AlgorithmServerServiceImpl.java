@@ -11,7 +11,9 @@ import com.sk.iba.common.utils.DeployPathUtils;
 import com.sk.iba.module.device.dto.AlgorithmServerCreateDTO;
 import com.sk.iba.module.device.dto.AlgorithmServerQueryDTO;
 import com.sk.iba.module.device.dto.AlgorithmServerUpdateDTO;
+import com.sk.iba.module.device.entity.AlgorithmRuntime;
 import com.sk.iba.module.device.entity.AlgorithmServer;
+import com.sk.iba.module.device.mapper.AlgorithmRuntimeMapper;
 import com.sk.iba.module.device.mapper.AlgorithmServerMapper;
 import com.sk.iba.module.device.service.AlgorithmServerService;
 import com.sk.iba.module.device.vo.AlgorithmServerOptionVO;
@@ -32,6 +34,8 @@ import java.util.List;
 public class AlgorithmServerServiceImpl implements AlgorithmServerService {
 
     private final AlgorithmServerMapper algorithmServerMapper;
+
+    private final AlgorithmRuntimeMapper algorithmRuntimeMapper;
 
     @Override
     public PageResult<AlgorithmServerVO> pageServers(AlgorithmServerQueryDTO queryDTO) {
@@ -163,6 +167,15 @@ public class AlgorithmServerServiceImpl implements AlgorithmServerService {
         AlgorithmServer server = algorithmServerMapper.selectById(id);
         if (server == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "算法服务器不存在");
+        }
+        
+        Long runtimeCount = algorithmRuntimeMapper.selectCount(
+                new LambdaQueryWrapper<AlgorithmRuntime>()
+                        .eq(AlgorithmRuntime::getServerId, id)
+        );
+
+        if (runtimeCount != null && runtimeCount > 0) {
+            throw new BusinessException("该算法服务器下存在已部署算法，不能删除");
         }
 
         algorithmServerMapper.deleteById(id);
