@@ -4,7 +4,10 @@ import com.sk.iba.common.page.PageResult;
 import com.sk.iba.module.device.dto.AlgorithmPackageCreateDTO;
 import com.sk.iba.module.device.dto.AlgorithmPackageQueryDTO;
 import com.sk.iba.module.device.dto.AlgorithmPackageUpdateDTO;
+import com.sk.iba.module.device.vo.AlgorithmPackageOptionVO;
 import com.sk.iba.module.device.vo.AlgorithmPackageVO;
+
+import java.util.List;
 
 /**
  * 算法包 Service
@@ -37,4 +40,9 @@ public interface AlgorithmPackageService {
      * 删除算法包
      */
     void deleteAlgorithmPackage(Long id);
+
+    /**
+     * 查询算法包下拉选项
+     */
+    List<AlgorithmPackageOptionVO> listAlgorithmPackageOptions(Long functionId);
 }

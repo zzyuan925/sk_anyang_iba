@@ -8,6 +8,7 @@ import com.sk.iba.module.device.dto.AlgorithmPackageCreateDTO;
 import com.sk.iba.module.device.dto.AlgorithmPackageQueryDTO;
 import com.sk.iba.module.device.dto.AlgorithmPackageUpdateDTO;
 import com.sk.iba.module.device.service.AlgorithmPackageService;
+import com.sk.iba.module.device.vo.AlgorithmPackageOptionVO;
 import com.sk.iba.module.device.vo.AlgorithmPackageVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 算法包管理
@@ -77,5 +80,13 @@ public class AlgorithmPackageController {
     public Result<Void> delete(@PathVariable @NotNull(message = "算法包ID不能为空") Long id) {
         algorithmPackageService.deleteAlgorithmPackage(id);
         return Result.success();
+    }
+
+    @OperationLog(module = "算法包管理", name = "查询算法包下拉选项", type = OperationType.QUERY, recordResult = false)
+    @Operation(summary = "查询算法包下拉选项", description = "用于算法部署时选择算法包")
+    @GetMapping("/options")
+    @PreAuthorize("hasAuthority('device:algorithm-package:options')")
+    public Result<List<AlgorithmPackageOptionVO>> options(@RequestParam(required = false) Long functionId) {
+        return Result.success(algorithmPackageService.listAlgorithmPackageOptions(functionId));
     }
 }

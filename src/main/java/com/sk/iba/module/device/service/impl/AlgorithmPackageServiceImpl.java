@@ -15,6 +15,7 @@ import com.sk.iba.module.device.entity.AlgorithmPackage;
 import com.sk.iba.module.device.mapper.AlgorithmFunctionMapper;
 import com.sk.iba.module.device.mapper.AlgorithmPackageMapper;
 import com.sk.iba.module.device.service.AlgorithmPackageService;
+import com.sk.iba.module.device.vo.AlgorithmPackageOptionVO;
 import com.sk.iba.module.device.vo.AlgorithmPackageVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
@@ -130,6 +131,50 @@ public class AlgorithmPackageServiceImpl implements AlgorithmPackageService {
     public void deleteAlgorithmPackage(Long id) {
         AlgorithmPackage algorithmPackage = getAlgorithmPackage(id);
         algorithmPackageMapper.deleteById(algorithmPackage.getId());
+    }
+
+    @Override
+    public List<AlgorithmPackageOptionVO> listAlgorithmPackageOptions(Long functionId) {
+        List<AlgorithmPackage> algorithmPackages = algorithmPackageMapper.selectList(
+                new LambdaQueryWrapper<AlgorithmPackage>()
+                        .eq(functionId != null, AlgorithmPackage::getFunctionId, functionId)
+                        .orderByDesc(AlgorithmPackage::getCreateTime)
+        );
+
+        if (algorithmPackages.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, AlgorithmFunction> functionMap = buildFunctionMap(algorithmPackages);
+
+        return algorithmPackages.stream()
+                .map(algorithmPackage -> toOptionVO(algorithmPackage, functionMap))
+                .toList();
+    }
+
+    private AlgorithmPackageOptionVO toOptionVO(AlgorithmPackage algorithmPackage,
+                                                Map<Long, AlgorithmFunction> functionMap) {
+        AlgorithmPackageOptionVO vo = new AlgorithmPackageOptionVO();
+        vo.setId(algorithmPackage.getId());
+        vo.setFunctionId(algorithmPackage.getFunctionId());
+        vo.setVersion(algorithmPackage.getVersion());
+        vo.setRuntimeEnv(algorithmPackage.getRuntimeEnv());
+
+        AlgorithmFunction function = functionMap.get(algorithmPackage.getFunctionId());
+        if (function != null) {
+            vo.setFunctionName(function.getFunctionName());
+            vo.setFunctionCode(function.getFunctionCode());
+
+            String name = StringUtils.hasText(function.getFunctionName())
+                    ? function.getFunctionName()
+                    : function.getFunctionCode();
+
+            vo.setLabel(name + " - " + algorithmPackage.getVersion());
+        } else {
+            vo.setLabel(algorithmPackage.getVersion());
+        }
+
+        return vo;
     }
 
     private AlgorithmPackage getAlgorithmPackage(Long id) {
